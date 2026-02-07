@@ -1,8 +1,20 @@
+/**
+ * キーボードショートカット表示バー
+ *
+ * アプリケーション下部に表示される操作方法の参照UI。
+ * アウトライナーとツリー可視化それぞれの操作方法を表示する。
+ */
 import './ShortcutBar.css';
 
+/**
+ * ショートカット表示バー
+ *
+ * ユーザーが利用可能な操作を常時表示する。
+ */
 const ShortcutBar = () => {
   return (
     <div className="shortcut-bar">
+      {/* アウトライナーの操作方法 */}
       <div className="shortcut-section">
         <span className="shortcut-title">Outliner:</span>
         <span className="shortcut-item">
@@ -22,6 +34,7 @@ const ShortcutBar = () => {
         </span>
       </div>
       <div className="shortcut-divider" />
+      {/* ツリー可視化の操作方法 */}
       <div className="shortcut-section">
         <span className="shortcut-title">Tree:</span>
         <span className="shortcut-item">クリック: 選択</span>
