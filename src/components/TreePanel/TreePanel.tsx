@@ -94,9 +94,9 @@ const TreePanel = () => {
       return layout.edges;
     }
 
-    // ドラッグ中のノードから出ているエッジを除外
+    // ドラッグ中のノードへのエッジを除外（旧親との接続を隠す）
     const filteredEdges = layout.edges.filter(
-      (edge) => edge.source !== dragState.nodeId,
+      (edge) => edge.target !== dragState.nodeId,
     );
 
     // プレビューエッジを追加（hoverTargetIdがある場合のみ）
