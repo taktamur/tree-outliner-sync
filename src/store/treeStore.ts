@@ -15,6 +15,10 @@ import {
   deleteNode,
   moveNode,
 } from '../utils/treeOperations';
+import {
+  parseScrapboxToTree,
+  formatTreeToScrapbox,
+} from '../utils/scrapboxConverter';
 
 /**
  * ツリーストアの型定義
@@ -46,6 +50,12 @@ interface TreeStore {
   // ストア全体操作
   /** ノードリスト全体を置き換え */
   setNodes: (nodes: TreeNode[]) => void;
+
+  // Scrapbox連携
+  /** Scrapboxテキストからインポート（既存データは置き換えられる） */
+  importFromScrapbox: (text: string) => void;
+  /** Scrapboxテキストにエクスポート */
+  exportToScrapbox: () => string;
 }
 
 /**
@@ -123,4 +133,18 @@ export const useTreeStore = create<TreeStore>((set, get) => ({
   setSelectedNodeId: (id) => set({ selectedNodeId: id }),
 
   setNodes: (nodes) => set({ nodes }),
+
+  importFromScrapbox: (text) => {
+    if (get().nodes.length > 0) {
+      if (!confirm('現在のデータは失われます。続行しますか?')) {
+        return;
+      }
+    }
+    const nodes = parseScrapboxToTree(text);
+    set({ nodes, selectedNodeId: null });
+  },
+
+  exportToScrapbox: () => {
+    return formatTreeToScrapbox(get().nodes);
+  },
 }));

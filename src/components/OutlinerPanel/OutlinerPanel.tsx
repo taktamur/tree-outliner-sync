@@ -4,6 +4,7 @@
  * ツリー構造をテキストベースで階層表示するアウトライナーUI。
  * ルートノードのみを直接レンダリングし、子ノードはOutlinerItemが再帰的に表示する。
  */
+import { useState } from 'react';
 import { useTreeStore } from '../../store/treeStore';
 import { getChildren } from '../../utils/treeOperations';
 import OutlinerItem from './OutlinerItem';
@@ -16,17 +17,86 @@ import './OutlinerPanel.css';
  */
 const OutlinerPanel = () => {
   const nodes = useTreeStore((s) => s.nodes);
+  const importFromScrapbox = useTreeStore((s) => s.importFromScrapbox);
+  const exportToScrapbox = useTreeStore((s) => s.exportToScrapbox);
   const rootNodes = getChildren(nodes, null); // parentId === null のノードを取得
+
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importText, setImportText] = useState('');
+
+  const handleImport = () => {
+    if (importText.trim()) {
+      importFromScrapbox(importText);
+      setImportText('');
+      setIsImportModalOpen(false);
+    }
+  };
+
+  const handleExport = () => {
+    const text = exportToScrapbox();
+    navigator.clipboard.writeText(text).then(
+      () => {
+        alert('Scrapbox形式のテキストをクリップボードにコピーしました');
+      },
+      () => {
+        alert('クリップボードへのコピーに失敗しました');
+      }
+    );
+  };
 
   return (
     <div className="outliner-panel">
-      <div className="outliner-header">Outliner</div>
+      <div className="outliner-header">
+        <div className="outliner-header-content">
+          <span>Outliner</span>
+          <div className="outliner-header-buttons">
+            <button
+              className="outliner-btn"
+              onClick={() => setIsImportModalOpen(true)}
+              title="Scrapboxからインポート"
+            >
+              Import
+            </button>
+            <button
+              className="outliner-btn"
+              onClick={handleExport}
+              title="Scrapboxへエクスポート"
+            >
+              Export
+            </button>
+          </div>
+        </div>
+      </div>
       <div className="outliner-content">
         {/* ルートノードをそれぞれ表示（子は再帰的に表示される） */}
         {rootNodes.map((root) => (
           <OutlinerItem key={root.id} nodeId={root.id} />
         ))}
       </div>
+
+      {/* インポートモーダル */}
+      {isImportModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsImportModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Scrapboxからインポート</h3>
+            <textarea
+              className="import-textarea"
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              placeholder="Scrapbox形式のテキストを貼り付けてください..."
+              autoFocus
+            />
+            <div className="modal-buttons">
+              <button className="modal-btn modal-btn-cancel" onClick={() => setIsImportModalOpen(false)}>
+                キャンセル
+              </button>
+              <button className="modal-btn modal-btn-primary" onClick={handleImport}>
+                インポート
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
