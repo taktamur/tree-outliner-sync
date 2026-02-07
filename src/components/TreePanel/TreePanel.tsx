@@ -1,3 +1,9 @@
+/**
+ * ツリー可視化パネルコンポーネント
+ *
+ * React Flowを使用してツリー構造を視覚的に表示する。
+ * ノードのクリック選択とドラッグ&ドロップによる親子関係の変更が可能。
+ */
 import { useCallback, useMemo } from 'react';
 import {
   ReactFlow,
@@ -14,21 +20,32 @@ import { useTreeLayout } from '../../hooks/useTreeLayout';
 import CustomNode from './CustomNode';
 import './TreePanel.css';
 
+/** カスタムノードタイプの登録 */
 const nodeTypes = { custom: CustomNode };
 
+/**
+ * ツリー可視化パネル
+ *
+ * React Flowでツリーをレンダリングし、D&D操作を可能にする。
+ */
 const TreePanel = () => {
   const { setSelectedNodeId, move } = useTreeStore();
   const layout = useTreeLayout();
 
+  // React Flow用のノードとエッジの状態管理
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(layout.nodes);
   const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(layout.edges);
 
-  // レイアウトが変わったらflowノードを更新
+  // レイアウトが変わったらReact Flowのノード・エッジを同期
   useMemo(() => {
     setFlowNodes(layout.nodes);
     setFlowEdges(layout.edges);
   }, [layout.nodes, layout.edges, setFlowNodes, setFlowEdges]);
 
+  /**
+   * ノードクリック時の処理
+   * クリックされたノードを選択状態にする
+   */
   const onNodeClick: NodeMouseHandler = useCallback(
     (_event, node) => {
       setSelectedNodeId(node.id);
@@ -36,19 +53,26 @@ const TreePanel = () => {
     [setSelectedNodeId],
   );
 
+  /**
+   * ノードドラッグ終了時の処理
+   *
+   * ドロップ位置から最近接ノードを探し、120px以内であればその子に、
+   * それ以外の場合はルートノードに移動する。
+   */
   const onNodeDragStop: NodeMouseHandler = useCallback(
     (_event, draggedNode) => {
-      // ドロップされたノードの位置から、最も近い他のノードを探す
+      // ドラッグされたノードの中心座標を計算
       const draggedCenter = {
-        x: draggedNode.position.x + 75,
-        y: draggedNode.position.y + 20,
+        x: draggedNode.position.x + 75, // NODE_WIDTH / 2
+        y: draggedNode.position.y + 20, // NODE_HEIGHT / 2
       };
 
+      // 最も近いノードを探索
       let closestNode: Node | null = null;
       let closestDist = Infinity;
 
       for (const n of layout.nodes) {
-        if (n.id === draggedNode.id) continue;
+        if (n.id === draggedNode.id) continue; // 自分自身は除外
         const nodeCenter = { x: n.position.x + 75, y: n.position.y + 20 };
         const dist = Math.sqrt(
           (draggedCenter.x - nodeCenter.x) ** 2 + (draggedCenter.y - nodeCenter.y) ** 2,
@@ -63,7 +87,7 @@ const TreePanel = () => {
       if (closestNode && closestDist < 120) {
         move(draggedNode.id, closestNode.id);
       } else {
-        move(draggedNode.id, null);
+        move(draggedNode.id, null); // 空白にドロップ → ルート化
       }
     },
     [layout.nodes, move],
