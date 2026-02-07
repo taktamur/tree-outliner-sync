@@ -15,6 +15,7 @@ import {
 
 describe('treeOperations', () => {
   describe('getChildren', () => {
+    // 親ノードの子ノードをorder順にソートして取得するテスト
     it('should return children of a parent sorted by order', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -27,6 +28,7 @@ describe('treeOperations', () => {
       expect(children[1].id).toBe('child2');
     });
 
+    // parentIdがnullの場合にルートノードを取得することを確認
     it('should return root nodes when parentId is null', () => {
       const nodes: TreeNode[] = [
         { id: 'root1', text: 'Root 1', parentId: null, order: 0 },
@@ -39,6 +41,7 @@ describe('treeOperations', () => {
       expect(roots[1].id).toBe('root2');
     });
 
+    // 子ノードが存在しない場合に空配列を返すことを確認
     it('should return empty array if no children exist', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -49,6 +52,7 @@ describe('treeOperations', () => {
   });
 
   describe('getDescendantIds', () => {
+    // すべての子孫ノードのIDを再帰的に取得するテスト
     it('should return all descendant IDs recursively', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -63,6 +67,7 @@ describe('treeOperations', () => {
       expect(descendants).toContain('grandchild');
     });
 
+    // リーフノード（子を持たないノード）の場合に空配列を返すことを確認
     it('should return empty array for leaf nodes', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -74,6 +79,7 @@ describe('treeOperations', () => {
   });
 
   describe('getFlattenedOrder', () => {
+    // ノードを深さ優先探索（DFS）順で返すテスト
     it('should return nodes in DFS order', () => {
       const nodes: TreeNode[] = [
         { id: 'root1', text: 'Root 1', parentId: null, order: 0 },
@@ -92,6 +98,7 @@ describe('treeOperations', () => {
       ]);
     });
 
+    // 空のリストを正しく処理できることを確認
     it('should handle empty list', () => {
       const flattened = getFlattenedOrder([]);
       expect(flattened).toHaveLength(0);
@@ -99,6 +106,7 @@ describe('treeOperations', () => {
   });
 
   describe('getDepth', () => {
+    // ネストされたノードの正しい深さを返すテスト
     it('should return correct depth for nested nodes', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -110,6 +118,7 @@ describe('treeOperations', () => {
       expect(getDepth(nodes, 'grandchild')).toBe(2);
     });
 
+    // 存在しないノードに対して0を返すことを確認
     it('should return 0 for non-existent node', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -119,6 +128,7 @@ describe('treeOperations', () => {
   });
 
   describe('indentNode', () => {
+    // ノードをインデントして直前の兄弟ノードの子にするテスト
     it('should indent node to become child of previous sibling', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -131,6 +141,7 @@ describe('treeOperations', () => {
       expect(child2?.parentId).toBe('child1');
     });
 
+    // ノードが最初の兄弟の場合にnullを返すことを確認
     it('should return null if node is first sibling', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -141,6 +152,7 @@ describe('treeOperations', () => {
       expect(result).toBeNull();
     });
 
+    // ノードが存在しない場合にnullを返すことを確認
     it('should return null if node does not exist', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -151,6 +163,7 @@ describe('treeOperations', () => {
   });
 
   describe('outdentNode', () => {
+    // ノードをアウトデントして親の兄弟にするテスト
     it('should outdent node to become sibling of parent', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -163,6 +176,7 @@ describe('treeOperations', () => {
       expect(grandchild?.parentId).toBe(null);
     });
 
+    // ノードがルートの場合にnullを返すことを確認
     it('should return null if node is root', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -171,6 +185,7 @@ describe('treeOperations', () => {
       expect(result).toBeNull();
     });
 
+    // ノードが存在しない場合にnullを返すことを確認
     it('should return null if node does not exist', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -181,6 +196,7 @@ describe('treeOperations', () => {
   });
 
   describe('normalizeOrders', () => {
+    // 兄弟ノードのorder値を0,1,2...に正規化するテスト
     it('should normalize sibling orders to 0,1,2...', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -195,6 +211,7 @@ describe('treeOperations', () => {
       expect(children[2].order).toBe(2);
     });
 
+    // 兄弟でないノードには影響しないことを確認
     it('should not affect non-sibling nodes', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -208,6 +225,7 @@ describe('treeOperations', () => {
   });
 
   describe('addNodeAfter', () => {
+    // 指定したノードの後ろに新しいノードを兄弟として追加するテスト
     it('should add new node after specified node as sibling', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -229,6 +247,7 @@ describe('treeOperations', () => {
       expect(siblings[2].id).toBe('child2');
     });
 
+    // 指定したノードが存在しない場合でもノードを追加できることを確認
     it('should add node even if afterNode does not exist', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -241,6 +260,7 @@ describe('treeOperations', () => {
   });
 
   describe('deleteNode', () => {
+    // ノードを削除し、その子ノードを親の階層に昇格させるテスト
     it('should delete node and promote children', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -258,6 +278,7 @@ describe('treeOperations', () => {
       expect(grandchild2?.parentId).toBe('root');
     });
 
+    // ノードが存在しない場合に配列を変更せず返すことを確認
     it('should return unchanged array if node does not exist', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -268,6 +289,7 @@ describe('treeOperations', () => {
   });
 
   describe('moveNode', () => {
+    // ノードを新しい親ノードに移動するテスト
     it('should move node to new parent', () => {
       const nodes: TreeNode[] = [
         { id: 'root1', text: 'Root 1', parentId: null, order: 0 },
@@ -280,6 +302,7 @@ describe('treeOperations', () => {
       expect(child?.parentId).toBe('root2');
     });
 
+    // 循環参照を防ぐことを確認（ノードを自分の子孫に移動できない）
     it('should prevent circular reference', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -290,6 +313,7 @@ describe('treeOperations', () => {
       expect(result).toBeNull();
     });
 
+    // ノードを自分自身に移動しようとした場合にnullを返すことを確認
     it('should return null if moving node to itself', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -298,6 +322,7 @@ describe('treeOperations', () => {
       expect(result).toBeNull();
     });
 
+    // ノードをルートレベルに移動できることを確認（親をnullにする）
     it('should allow moving to root (null parent)', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },

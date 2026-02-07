@@ -4,6 +4,7 @@ import { calculateLayout } from './layoutCalculator';
 
 describe('layoutCalculator', () => {
   describe('calculateLayout', () => {
+    // 単一ルートノードのツリーに対してレイアウトを計算するテスト
     it('should calculate layout for single root tree', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -31,6 +32,7 @@ describe('layoutCalculator', () => {
       expect(edgeIds).toContain('e-root-child2');
     });
 
+    // 複数ルートノードのツリーに対してレイアウトを計算し、縦方向に配置されることを確認
     it('should calculate layout for multiple root trees', () => {
       const nodes: TreeNode[] = [
         { id: 'root1', text: 'Root 1', parentId: null, order: 0 },
@@ -55,6 +57,7 @@ describe('layoutCalculator', () => {
       expect(root2Node!.position.y).toBeGreaterThan(root1Node!.position.y);
     });
 
+    // 深くネストされたツリーでLRレイアウト（左右配置）が正しく機能することを確認
     it('should handle deeply nested tree', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
@@ -84,6 +87,7 @@ describe('layoutCalculator', () => {
       expect(level3Node!.position.x).toBeGreaterThan(level2Node!.position.x);
     });
 
+    // 空のノードリストを正しく処理できることを確認
     it('should handle empty node list', () => {
       const result = calculateLayout([]);
 
@@ -91,6 +95,7 @@ describe('layoutCalculator', () => {
       expect(result.edges).toHaveLength(0);
     });
 
+    // テキストが空の場合にデフォルトラベル「...」が使用されることを確認
     it('should use default label for empty text', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: '', parentId: null, order: 0 },
@@ -102,6 +107,7 @@ describe('layoutCalculator', () => {
       expect(result.nodes[0].data.label).toBe('...');
     });
 
+    // ノードのテキストがラベルとして保持されることを確認
     it('should preserve node text as label', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Custom Label', parentId: null, order: 0 },
@@ -113,6 +119,7 @@ describe('layoutCalculator', () => {
       expect(result.nodes[0].data.label).toBe('Custom Label');
     });
 
+    // 親子ノード間にのみエッジ（線）が作成されることを確認
     it('should create edges only between parent and child', () => {
       const nodes: TreeNode[] = [
         { id: 'root', text: 'Root', parentId: null, order: 0 },
