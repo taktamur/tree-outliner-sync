@@ -80,7 +80,8 @@ const TreePanel = () => {
   const findClosestNode = useCallback(
     (draggedNode: Node): { node: Node | null; distance: number } => {
       // ドラッグされたノードの幅を計算
-      const draggedWidth = calculateNodeWidth(draggedNode.data.label || '...');
+      const draggedLabel = (draggedNode.data as { label?: string }).label || '...';
+      const draggedWidth = calculateNodeWidth(draggedLabel);
       const draggedCenter = {
         x: draggedNode.position.x + draggedWidth / 2,
         y: draggedNode.position.y + NODE_HEIGHT / 2,
@@ -92,7 +93,8 @@ const TreePanel = () => {
       for (const n of layout.nodes) {
         if (n.id === draggedNode.id) continue; // 自分自身は除外
         // 各ノードの幅を計算
-        const nodeWidth = calculateNodeWidth(n.data.label || '...');
+        const nodeLabel = (n.data as { label?: string }).label || '...';
+        const nodeWidth = calculateNodeWidth(nodeLabel);
         const nodeCenter = {
           x: n.position.x + nodeWidth / 2,
           y: n.position.y + NODE_HEIGHT / 2
