@@ -174,7 +174,7 @@ const TreePanel = () => {
         originalParentId: dragState.originalParentId,
       });
     },
-    [findClosestNode],
+    [findClosestNode, dragState.originalParentId],
   );
 
   /**
