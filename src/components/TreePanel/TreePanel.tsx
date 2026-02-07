@@ -24,6 +24,25 @@ import './TreePanel.css';
 /** カスタムノードタイプの登録 */
 const nodeTypes = { custom: CustomNode };
 
+/** ノードの基本幅（px） */
+const BASE_NODE_WIDTH = 80;
+/** ノードの高さ（px） */
+const NODE_HEIGHT = 40;
+/** パディング（左右合計、px） */
+const HORIZONTAL_PADDING = 32;
+/** 1文字あたりの概算幅（px） */
+const CHAR_WIDTH = 8;
+
+/**
+ * テキストの長さからノードの概算幅を計算
+ * layoutCalculator.tsと同じロジック
+ */
+const calculateNodeWidth = (text: string): number => {
+  const textWidth = text.length * CHAR_WIDTH;
+  const totalWidth = Math.max(BASE_NODE_WIDTH, textWidth + HORIZONTAL_PADDING);
+  return totalWidth;
+};
+
 /** ドラッグ中の状態を保持 */
 interface DragState {
   nodeId: string | null;
@@ -60,9 +79,11 @@ const TreePanel = () => {
    */
   const findClosestNode = useCallback(
     (draggedNode: Node): { node: Node | null; distance: number } => {
+      // ドラッグされたノードの幅を計算
+      const draggedWidth = calculateNodeWidth(draggedNode.data.label || '...');
       const draggedCenter = {
-        x: draggedNode.position.x + 75, // NODE_WIDTH / 2
-        y: draggedNode.position.y + 20, // NODE_HEIGHT / 2
+        x: draggedNode.position.x + draggedWidth / 2,
+        y: draggedNode.position.y + NODE_HEIGHT / 2,
       };
 
       let closestNode: Node | null = null;
@@ -70,7 +91,12 @@ const TreePanel = () => {
 
       for (const n of layout.nodes) {
         if (n.id === draggedNode.id) continue; // 自分自身は除外
-        const nodeCenter = { x: n.position.x + 75, y: n.position.y + 20 };
+        // 各ノードの幅を計算
+        const nodeWidth = calculateNodeWidth(n.data.label || '...');
+        const nodeCenter = {
+          x: n.position.x + nodeWidth / 2,
+          y: n.position.y + NODE_HEIGHT / 2
+        };
         const dist = Math.sqrt(
           (draggedCenter.x - nodeCenter.x) ** 2 + (draggedCenter.y - nodeCenter.y) ** 2,
         );
