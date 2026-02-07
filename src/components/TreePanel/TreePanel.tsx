@@ -41,7 +41,7 @@ const TreePanel = () => {
 
   // React Flow用のノードとエッジの状態管理
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(layout.nodes);
-  const [flowEdges, setFlowEdges, onEdgesChange] = useEdgesState(layout.edges);
+  const [, setFlowEdges, onEdgesChange] = useEdgesState(layout.edges);
 
   // ドラッグ中の状態を管理（プレビュー表示用）
   const [dragState, setDragState] = useState<DragState>({
