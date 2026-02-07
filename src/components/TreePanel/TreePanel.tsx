@@ -171,6 +171,7 @@ const TreePanel = () => {
       setDragState({
         nodeId: draggedNode.id,
         hoverTargetId,
+        originalParentId: dragState.originalParentId,
       });
     },
     [findClosestNode],
