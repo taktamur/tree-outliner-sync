@@ -1,0 +1,44 @@
+.outliner-item-group {
+  width: 100%;
+}
+
+.outliner-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: background-color 0.1s;
+}
+
+.outliner-item:hover {
+  background-color: #f0f0f0;
+}
+
+.outliner-item.selected {
+  background-color: #e3f2fd;
+}
+
+.outliner-bullet {
+  color: #888;
+  font-size: 14px;
+  user-select: none;
+  flex-shrink: 0;
+  width: 12px;
+  text-align: center;
+}
+
+.outliner-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  font-family: inherit;
+  padding: 4px 0;
+  line-height: 1.5;
+}
+
+.outliner-input::placeholder {
+  color: #ccc;
+}
