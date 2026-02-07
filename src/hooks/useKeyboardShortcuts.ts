@@ -30,18 +30,22 @@ export const useKeyboardShortcuts = (nodeId: string) => {
       if (e.key === 'Tab' && !e.shiftKey) {
         // Tab: インデント
         e.preventDefault();
+        e.stopPropagation();
         indent(nodeId);
       } else if (e.key === 'Tab' && e.shiftKey) {
         // Shift+Tab: アウトデント
         e.preventDefault();
+        e.stopPropagation();
         outdent(nodeId);
       } else if (e.key === 'Enter') {
         // Enter: 新しいノードを現在のノードの直後に追加
         e.preventDefault();
+        e.stopPropagation();
         addAfter(nodeId);
       } else if (e.key === 'Backspace' && (e.target as HTMLInputElement).value === '') {
         // Backspace: 空のノードを削除（テキストが空の場合のみ）
         e.preventDefault();
+        e.stopPropagation();
         // 削除前にフォーカス先を決定（前のノードに移動）
         if (currentIdx > 0) {
           setSelectedNodeId(flatOrder[currentIdx - 1].id);
@@ -52,18 +56,20 @@ export const useKeyboardShortcuts = (nodeId: string) => {
       } else if (e.key === 'ArrowUp') {
         // ↑: 前のノードに移動
         e.preventDefault();
+        e.stopPropagation();
         if (currentIdx > 0) {
           setSelectedNodeId(flatOrder[currentIdx - 1].id);
         }
       } else if (e.key === 'ArrowDown') {
         // ↓: 次のノードに移動
         e.preventDefault();
+        e.stopPropagation();
         if (currentIdx < flatOrder.length - 1) {
           setSelectedNodeId(flatOrder[currentIdx + 1].id);
         }
       }
     },
-    [nodes, nodeId, indent, outdent, addAfter, remove, setSelectedNodeId],
+    [nodeId, indent, outdent, addAfter, remove, setSelectedNodeId],
   );
 
   return handleKeyDown;

@@ -37,7 +37,7 @@ const OutlinerItem = ({ nodeId }: OutlinerItemProps) => {
     if (isSelected && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [isSelected, selectedNodeId]);
+  }, [isSelected]);
 
   if (!node) return null;
 
