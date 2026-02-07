@@ -28,6 +28,8 @@ const nodeTypes = { custom: CustomNode };
 interface DragState {
   nodeId: string | null;
   hoverTargetId: string | null;
+  /** ドラッグ開始時の親ID（案2: 親ID比較用） */
+  originalParentId: string | null | undefined;
 }
 
 /**
@@ -47,6 +49,7 @@ const TreePanel = () => {
   const [dragState, setDragState] = useState<DragState>({
     nodeId: null,
     hoverTargetId: null,
+    originalParentId: undefined,
   });
 
   // レイアウトが変わったらReact Flowのノード・エッジを同期
@@ -129,6 +132,28 @@ const TreePanel = () => {
   );
 
   /**
+   * ノードドラッグ開始時の処理
+   *
+   * ドラッグ開始時の親IDを記録する。
+   * これにより、ドロップ時に親が実際に変わったかどうかを判定できる。
+   */
+  const onNodeDragStart: NodeMouseHandler = useCallback(
+    (_event, node) => {
+      // ストアから現在の親IDを取得
+      const { nodes } = useTreeStore.getState();
+      const treeNode = nodes.find((n) => n.id === node.id);
+      const originalParentId = treeNode?.parentId ?? null;
+
+      setDragState({
+        nodeId: node.id,
+        hoverTargetId: null,
+        originalParentId,
+      });
+    },
+    [],
+  );
+
+  /**
    * ノードドラッグ中の処理（リアルタイムプレビュー）
    *
    * ドラッグ中の位置から最近接ノードを探し、120px以内であれば
@@ -146,33 +171,38 @@ const TreePanel = () => {
       setDragState({
         nodeId: draggedNode.id,
         hoverTargetId,
+        originalParentId: dragState.originalParentId,
       });
     },
-    [findClosestNode],
+    [findClosestNode, dragState.originalParentId],
   );
 
   /**
-   * ノードドラッグ終了時の処理
+   * ノードドラッグ終了時の処理（案2: 親ID比較方式）
    *
-   * ドロップ位置から最近接ノードを探し、120px以内であればその子に、
-   * それ以外の場合はルートノードに移動する。
+   * ドロップ位置から新しい親を判定し、ドラッグ開始時の親と異なる場合のみ移動する。
+   * これにより、「レイアウト調整のためのドラッグ」と「親子関係変更のためのドラッグ」を区別できる。
    */
   const onNodeDragStop: NodeMouseHandler = useCallback(
     (_event, draggedNode) => {
       const { node: closestNode, distance: closestDist } =
         findClosestNode(draggedNode);
 
-      // 120px以内にノードがあればその子にする、なければルートに
-      if (closestNode && closestDist < 120) {
-        move(draggedNode.id, closestNode.id);
-      } else {
-        move(draggedNode.id, null); // 空白にドロップ → ルート化
+      // ドロップ先の親IDを判定
+      const newParentId = closestNode && closestDist < 120 ? closestNode.id : null;
+
+      // ドラッグ開始時の親IDと比較（undefined チェック）
+      const originalParentId = dragState.originalParentId ?? null;
+
+      // 親が実際に変わった場合のみ move() を実行
+      if (newParentId !== originalParentId) {
+        move(draggedNode.id, newParentId);
       }
 
       // ドラッグ状態をリセット
-      setDragState({ nodeId: null, hoverTargetId: null });
+      setDragState({ nodeId: null, hoverTargetId: null, originalParentId: undefined });
     },
-    [findClosestNode, move],
+    [findClosestNode, move, dragState.originalParentId],
   );
 
   return (
@@ -185,6 +215,7 @@ const TreePanel = () => {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeClick={onNodeClick}
+          onNodeDragStart={onNodeDragStart}
           onNodeDrag={onNodeDrag}
           onNodeDragStop={onNodeDragStop}
           nodeTypes={nodeTypes}
