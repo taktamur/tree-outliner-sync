@@ -17,6 +17,10 @@ npm run build    # tsc + vite build
 npm run lint     # ESLint
 ```
 
+## Git ルール
+
+- `--force` / `-f` を伴う git 操作は禁止（`push --force`、`push --force-with-lease`、`reset --hard` など）
+
 ## アーキテクチャ上の注意点
 
 ### データモデル
