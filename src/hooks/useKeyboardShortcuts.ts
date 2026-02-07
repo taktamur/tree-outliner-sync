@@ -37,6 +37,10 @@ export const useKeyboardShortcuts = (nodeId: string) => {
         outdent(nodeId);
       } else if (e.key === 'Enter') {
         // Enter: 新しいノードを現在のノードの直後に追加
+        // IME変換中（日本語入力の確定など）の場合はスキップ
+        if (e.isComposing) {
+          return;
+        }
         e.preventDefault();
         addAfter(nodeId);
       } else if (e.key === 'Backspace' && (e.target as HTMLInputElement).value === '') {
