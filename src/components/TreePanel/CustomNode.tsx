@@ -38,7 +38,6 @@ const CustomNode = ({ data, dragging }: NodeProps) => {
         textAlign: 'center',
         cursor: dragging ? 'grabbing' : 'grab', // ドラッグ中はgrabbing、通常時はgrab
         boxShadow: selected ? '0 2px 8px rgba(25,118,210,0.3)' : '0 1px 3px rgba(0,0,0,0.1)',
-        transition: dragging ? 'none' : 'all 0.3s ease-out', // ドラッグ中はtransitionを無効化
       }}
     >
       {/* 左側の接続ハンドル（親からの入力） */}
