@@ -19,3 +19,13 @@
   flex: 1;
   min-height: 0;
 }
+
+/* ノード移動時のアニメーション */
+.tree-content .react-flow__node {
+  transition: transform 0.3s ease-out;
+}
+
+/* ドラッグ中はアニメーションを無効化 */
+.tree-content .react-flow__node.dragging {
+  transition: none;
+}

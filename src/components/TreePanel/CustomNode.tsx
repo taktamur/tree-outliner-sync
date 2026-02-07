@@ -19,8 +19,9 @@ type CustomNodeData = {
  * ツリー可視化用のカスタムノード
  *
  * @param data ノードデータ（label, selected）
+ * @param dragging ドラッグ中かどうか
  */
-const CustomNode = ({ data }: NodeProps) => {
+const CustomNode = ({ data, dragging }: NodeProps) => {
   const { label, selected } = data as unknown as CustomNodeData;
 
   return (
@@ -35,7 +36,7 @@ const CustomNode = ({ data }: NodeProps) => {
         fontWeight: 500,
         minWidth: '80px',
         textAlign: 'center',
-        cursor: 'grab', // ドラッグ可能を示す
+        cursor: dragging ? 'grabbing' : 'grab', // ドラッグ中はgrabbing、通常時はgrab
         boxShadow: selected ? '0 2px 8px rgba(25,118,210,0.3)' : '0 1px 3px rgba(0,0,0,0.1)',
       }}
     >
