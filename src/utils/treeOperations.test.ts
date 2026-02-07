@@ -173,7 +173,7 @@ describe('treeOperations', () => {
       const result = outdentNode(nodes, 'grandchild');
       expect(result).not.toBeNull();
       const grandchild = result!.find((n) => n.id === 'grandchild');
-      expect(grandchild?.parentId).toBe(null);
+      expect(grandchild?.parentId).toBe('root');
     });
 
     // ノードがルートの場合にnullを返すことを確認
