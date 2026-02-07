@@ -57,12 +57,19 @@ const TreePanel = () => {
 
   /**
    * 最近接ノードを探す共通ロジック
+   *
+   * React Flowの`measured`プロパティから実際のノードサイズを取得して、
+   * 正確な中心位置を計算する。
    */
   const findClosestNode = useCallback(
     (draggedNode: Node): { node: Node | null; distance: number } => {
+      // ドラッグ中のノードの中心位置を計算
+      // measured が存在しない場合はフォールバック値を使用
+      const draggedWidth = draggedNode.measured?.width ?? 150;
+      const draggedHeight = draggedNode.measured?.height ?? 40;
       const draggedCenter = {
-        x: draggedNode.position.x + 75, // NODE_WIDTH / 2
-        y: draggedNode.position.y + 20, // NODE_HEIGHT / 2
+        x: draggedNode.position.x + draggedWidth / 2,
+        y: draggedNode.position.y + draggedHeight / 2,
       };
 
       let closestNode: Node | null = null;
@@ -70,7 +77,15 @@ const TreePanel = () => {
 
       for (const n of layout.nodes) {
         if (n.id === draggedNode.id) continue; // 自分自身は除外
-        const nodeCenter = { x: n.position.x + 75, y: n.position.y + 20 };
+
+        // 各ノードの実際のサイズを取得して中心位置を計算
+        const nodeWidth = n.measured?.width ?? 150;
+        const nodeHeight = n.measured?.height ?? 40;
+        const nodeCenter = {
+          x: n.position.x + nodeWidth / 2,
+          y: n.position.y + nodeHeight / 2
+        };
+
         const dist = Math.sqrt(
           (draggedCenter.x - nodeCenter.x) ** 2 + (draggedCenter.y - nodeCenter.y) ** 2,
         );
