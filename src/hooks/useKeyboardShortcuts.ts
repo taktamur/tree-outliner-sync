@@ -38,7 +38,7 @@ export const useKeyboardShortcuts = (nodeId: string) => {
       } else if (e.key === 'Enter') {
         // Enter: 新しいノードを現在のノードの直後に追加
         // IME変換中（日本語入力の確定など）の場合はスキップ
-        if (e.isComposing) {
+        if (e.nativeEvent.isComposing) {
           return;
         }
         e.preventDefault();
