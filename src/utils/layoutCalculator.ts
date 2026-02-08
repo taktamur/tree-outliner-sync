@@ -7,17 +7,10 @@
 import dagre from 'dagre';
 import type { TreeNode } from '../types/tree';
 import { getChildren } from './treeOperations';
+import { calculateNodeWidth, NODE_HEIGHT } from './textMeasure';
 
-/** ノードの基本幅（px） */
-const BASE_NODE_WIDTH = 80;
-/** ノードの高さ（px） */
-const NODE_HEIGHT = 40;
 /** ツリー間の縦方向の間隔（px） */
 const TREE_GAP = 60;
-/** パディング（左右合計、px） */
-const HORIZONTAL_PADDING = 32; // 8px * 2 (padding) + 16px (余白)
-/** 1文字あたりの概算幅（px） */
-const CHAR_WIDTH = 8;
 
 /** React Flow用のレイアウト済みノード */
 interface LayoutNode {
@@ -39,18 +32,6 @@ interface LayoutResult {
   nodes: LayoutNode[];
   edges: LayoutEdge[];
 }
-
-/**
- * テキストの長さからノードの概算幅を計算
- *
- * @param text ノードのテキスト
- * @returns 概算幅（px）
- */
-const calculateNodeWidth = (text: string): number => {
-  const textWidth = text.length * CHAR_WIDTH;
-  const totalWidth = Math.max(BASE_NODE_WIDTH, textWidth + HORIZONTAL_PADDING);
-  return totalWidth;
-};
 
 /**
  * 単一のサブツリーをdagreでレイアウト計算
@@ -89,8 +70,10 @@ const layoutSubtree = (
 
   // dagreにノードを追加（テキストに基づく動的サイズ指定）
   subtreeNodes.forEach((n) => {
-    const width = nodeWidths.get(n.id) ?? BASE_NODE_WIDTH;
-    g.setNode(n.id, { width, height: NODE_HEIGHT });
+    const width = nodeWidths.get(n.id);
+    if (width !== undefined) {
+      g.setNode(n.id, { width, height: NODE_HEIGHT });
+    }
   });
 
   // dagreにエッジ（親子関係）を追加
@@ -110,7 +93,10 @@ const layoutSubtree = (
   let maxY = -Infinity;
   const layoutNodes: LayoutNode[] = subtreeNodes.map((n) => {
     const dagreNode = g.node(n.id);
-    const nodeWidth = nodeWidths.get(n.id) ?? BASE_NODE_WIDTH;
+    const nodeWidth = nodeWidths.get(n.id);
+    if (nodeWidth === undefined) {
+      throw new Error(`Node width not found for node ${n.id}`);
+    }
     const y = dagreNode.y + yOffset;
     minY = Math.min(minY, y - NODE_HEIGHT / 2);
     maxY = Math.max(maxY, y + NODE_HEIGHT / 2);
