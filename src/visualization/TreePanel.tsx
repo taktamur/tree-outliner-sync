@@ -16,8 +16,8 @@ import {
   type NodeMouseHandler,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useTreeStore } from '../../store/treeStore';
-import { useTreeLayout } from '../../hooks/useTreeLayout';
+import { useTreeStore } from '../store/treeStore';
+import { useTreeLayout } from './useTreeLayout';
 import CustomNode from './CustomNode';
 import './TreePanel.css';
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { TreeNode } from '../types/tree';
+import type { TreeNode } from './types';
 import {
   getChildren,
   getDescendantIds,
@@ -11,7 +11,7 @@ import {
   addNodeAfter,
   deleteNode,
   moveNode,
-} from './treeOperations';
+} from './operations';
 
 describe('treeOperations', () => {
   describe('getChildren', () => {

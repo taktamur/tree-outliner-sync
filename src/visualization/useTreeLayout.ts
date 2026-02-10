@@ -6,7 +6,7 @@
  */
 import { useMemo } from 'react';
 import { useTreeStore } from '../store/treeStore';
-import { calculateLayout } from '../utils/layoutCalculator';
+import { calculateLayout } from './layoutCalculator';
 import type { Node, Edge } from '@xyflow/react';
 
 /**

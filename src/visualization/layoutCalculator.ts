@@ -5,8 +5,8 @@
  * 複数のルートノードがある場合は、それぞれを個別にレイアウトして縦方向に積み重ねる。
  */
 import dagre from 'dagre';
-import type { TreeNode } from '../types/tree';
-import { getChildren } from './treeOperations';
+import type { TreeNode } from '../store/types';
+import { getChildren } from '../store/operations';
 
 /** ノードの基本幅（px） */
 const BASE_NODE_WIDTH = 80;

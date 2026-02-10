@@ -1,4 +1,4 @@
-import type { TreeNode } from '../types/tree';
+import type { TreeNode } from './types';
 
 /** 指定parentIdの子ノードをorder順で取得 */
 export const getChildren = (nodes: TreeNode[], parentId: string | null): TreeNode[] =>
