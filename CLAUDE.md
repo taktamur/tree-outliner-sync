@@ -31,20 +31,20 @@ npm run lint     # ESLint
 
 ### データモデル
 
-- `TreeNode` はフラットリスト + `parentId` 方式（`src/types/tree.ts`）
+- `TreeNode` はフラットリスト + `parentId` 方式
 - ネスト構造は描画時に `useMemo` で計算して導出する
 - ルートノードは `parentId === null`、兄弟間の順序は `order` で管理
 
 ### 状態管理
 
-- 全ツリー操作は `src/store/treeStore.ts`（Zustand）に集約
-- ツリー操作の純粋関数は `src/utils/treeOperations.ts` に分離
+- 全ツリー操作は Zustand ストアに集約
+- ツリー操作の純粋関数は別ファイルに分離
 - 両パネルが同一ストアを参照するため、片方の変更が自動的に反映される
 
 ### dagre の利用
 
 - `@dagrejs/dagre` (v1) は Vite の ESM 環境で dynamic require エラーが出るため、`dagre` (v0.8) を使用
-- 複数ルートは個別に dagre レイアウトして Y オフセットで縦積み（`src/utils/layoutCalculator.ts`）
+- 複数ルートは個別に dagre レイアウトして Y オフセットで縦積み
 
 ### ツリー D&D
 
