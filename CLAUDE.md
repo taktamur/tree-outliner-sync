@@ -36,33 +36,36 @@ npm run lint     # ESLint
 
 ## Claude Code 実行権限設定
 
-Claude Code からビルド・lint・テストコマンドを実行するには、以下の権限設定が必要です:
+Claude Code からビルド・lint・テストコマンドを実行するには、以下の権限設定が必要です。
 
-### 設定方法
+### ローカル環境（Claude Code CLI）
 
-Claude Code の `allowedPrompts` に以下を追加:
+ローカルで Claude Code CLI を使用する場合は、`~/.claude/config.json` に以下を追加:
 
 ```json
 {
   "allowedPrompts": [
     {
       "tool": "Bash",
-      "prompt": "run tests"
-    },
-    {
-      "tool": "Bash",
-      "prompt": "run build"
-    },
-    {
-      "tool": "Bash",
-      "prompt": "run lint"
+      "prompt": "npm *"
     }
   ]
 }
 ```
 
+これにより、`npm install`, `npm run build`, `npm run lint`, `npm run test` など、全てのnpmコマンドが許可されます。
+
+### GitHub Actions（Claude Code GitHub Action）
+
+GitHub Actions で動作する Claude Code に権限を付与するには、`.github/workflows/claude.yml` の `claude_args` に以下を設定:
+
+```yaml
+claude_args: '--allowedPrompts Bash("npm *")'
+```
+
 ### 対象コマンド
 
+- `npm install`: 依存パッケージのインストール
 - `npm run build`: TypeScriptコンパイル + Viteビルド
 - `npm run lint`: ESLint実行
 - `npm run test`: ユニットテスト実行（設定されている場合）
