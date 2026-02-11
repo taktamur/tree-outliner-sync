@@ -6,7 +6,7 @@
 
 - Claude とのやりとりは日本語で行うこと
 - 判断に困ったらユーザと相談する
-- PR作成時には、buildとlint unittestが通ることを確認してからマージする
+- PR作成時には、build・lint・unittestが全て通ることを確認してからマージする
 
 ## 技術スタック
 
@@ -21,6 +21,8 @@
 npm run dev      # 開発サーバー（http://localhost:5173）
 npm run build    # tsc + vite build
 npm run lint     # ESLint
+npm test         # ユニットテスト（watch モード）
+npm run test:run # ユニットテスト（1回実行）
 ```
 
 ## Git ルール
