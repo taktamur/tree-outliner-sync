@@ -4,17 +4,19 @@ import { findClosestNode, determineDropTarget, type NodeRect } from './dragCalcu
 describe('dragCalculator', () => {
   describe('findClosestNode', () => {
     it('should find the closest node by Euclidean distance', () => {
+      // すべて同じラベル長（1文字）にして、幅を統一（BASE_NODE_WIDTH = 80px）
+      // 中心座標: x + 40, y + 20
       const dragged: NodeRect = {
         id: 'dragged',
         x: 100,
         y: 100,
-        label: 'Dragged',
+        label: 'D', // 幅80px、中心(140, 120)
       };
 
       const candidates: NodeRect[] = [
-        { id: 'node1', x: 200, y: 100, label: 'Node 1' }, // 距離: 100px
-        { id: 'node2', x: 100, y: 200, label: 'Node 2' }, // 距離: 100px
-        { id: 'node3', x: 300, y: 300, label: 'Node 3' }, // 距離: ~283px
+        { id: 'node1', x: 200, y: 100, label: 'N1' }, // 幅80px、中心(240, 120) → 距離: 100px
+        { id: 'node2', x: 100, y: 200, label: 'N2' }, // 幅80px、中心(140, 220) → 距離: 100px
+        { id: 'node3', x: 300, y: 300, label: 'N3' }, // 幅80px、中心(340, 320) → 距離: ~283px
       ];
 
       const result = findClosestNode(dragged, candidates);
@@ -132,26 +134,26 @@ describe('dragCalculator', () => {
     });
 
     it('should handle boundary case (exactly at threshold)', () => {
+      // 1文字ラベルは幅80px、中心は x+40, y+20
       const dragged: NodeRect = {
         id: 'dragged',
         x: 0,
         y: 0,
-        label: 'D',
+        label: 'D', // 中心(40, 20)
       };
 
-      // 120px離れたノードを配置（中心座標が120pxの距離になるように調整）
+      // 119px離れた位置に配置（中心間距離が119pxになるように）
+      // 中心X座標: 40 + 119 = 159 → 左上X座標: 159 - 40 = 119
       const candidates: NodeRect[] = [
-        { id: 'node1', x: 120, y: 0, label: 'N' },
+        { id: 'node1', x: 119, y: 0, label: 'N' }, // 中心(159, 20) → 距離: 119px
       ];
 
-      // 閾値ちょうどの場合
+      // 距離119px、閾値120pxの場合 → 範囲内
       const result1 = determineDropTarget(dragged, candidates, 120);
-      // 距離が120未満なのでnodeIdが返る
       expect(result1).toBe('node1');
 
-      // 閾値を少し下げた場合
+      // 距離119px、閾値119pxの場合 → 範囲外（distance < threshold なので）
       const result2 = determineDropTarget(dragged, candidates, 119);
-      // 距離が119より大きいのでnullが返る
       expect(result2).toBeNull();
     });
 
