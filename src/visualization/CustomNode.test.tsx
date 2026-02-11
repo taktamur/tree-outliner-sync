@@ -25,6 +25,8 @@ describe('CustomNode', () => {
       selectable: true,
       deletable: true,
       draggable: true,
+      positionAbsoluteX: 0,
+      positionAbsoluteY: 0,
     } as NodeProps;
 
     const { container } = render(<CustomNode {...props} />);
@@ -45,6 +47,8 @@ describe('CustomNode', () => {
       selectable: true,
       deletable: true,
       draggable: true,
+      positionAbsoluteX: 0,
+      positionAbsoluteY: 0,
     } as NodeProps;
 
     const { container } = render(<CustomNode {...props} />);
@@ -65,6 +69,8 @@ describe('CustomNode', () => {
       selectable: true,
       deletable: true,
       draggable: true,
+      positionAbsoluteX: 0,
+      positionAbsoluteY: 0,
     } as NodeProps;
 
     const { container } = render(<CustomNode {...props} />);
