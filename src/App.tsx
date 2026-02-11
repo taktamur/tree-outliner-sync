@@ -10,6 +10,7 @@
  * - 下部: ShortcutBar（キーボードショートカット一覧）
  */
 import { useState, useEffect } from 'react';
+import { Toaster } from 'react-hot-toast';
 import OutlinerPanel from './outliner/OutlinerPanel';
 import TreePanel from './visualization/TreePanel';
 import ShortcutBar from './shared/components/ShortcutBar/ShortcutBar';
@@ -72,6 +73,28 @@ function App() {
 
   return (
     <div className="app">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#333',
+            color: '#fff',
+          },
+          success: {
+            iconTheme: {
+              primary: '#4a90e2',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#e74c3c',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
       <div className="app-main">
         {/* 左パネル: アウトライナー */}
         <div className="panel-left" style={{ width: `${leftPanelWidth}px` }}>
