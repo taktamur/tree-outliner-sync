@@ -7,6 +7,7 @@
 import dagre from 'dagre';
 import type { TreeNode } from '../store/types';
 import { getChildren } from '../store/operations';
+import { calculateNodeWidth } from '../shared/textMeasure';
 
 /** ノードの基本幅（px） */
 const BASE_NODE_WIDTH = 80;
@@ -14,10 +15,6 @@ const BASE_NODE_WIDTH = 80;
 const NODE_HEIGHT = 40;
 /** ツリー間の縦方向の間隔（px） */
 const TREE_GAP = 60;
-/** パディング（左右合計、px） */
-const HORIZONTAL_PADDING = 32; // 8px * 2 (padding) + 16px (余白)
-/** 1文字あたりの概算幅（px） */
-const CHAR_WIDTH = 8;
 
 /** React Flow用のレイアウト済みノード */
 interface LayoutNode {
@@ -39,18 +36,6 @@ interface LayoutResult {
   nodes: LayoutNode[];
   edges: LayoutEdge[];
 }
-
-/**
- * テキストの長さからノードの概算幅を計算
- *
- * @param text ノードのテキスト
- * @returns 概算幅（px）
- */
-const calculateNodeWidth = (text: string): number => {
-  const textWidth = text.length * CHAR_WIDTH;
-  const totalWidth = Math.max(BASE_NODE_WIDTH, textWidth + HORIZONTAL_PADDING);
-  return totalWidth;
-};
 
 /**
  * 単一のサブツリーをdagreでレイアウト計算

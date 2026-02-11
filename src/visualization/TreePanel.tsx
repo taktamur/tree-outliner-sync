@@ -19,29 +19,14 @@ import '@xyflow/react/dist/style.css';
 import { useTreeStore } from '../store/treeStore';
 import { useTreeLayout } from './useTreeLayout';
 import CustomNode from './CustomNode';
+import { calculateNodeWidth } from '../shared/textMeasure';
 import './TreePanel.css';
 
 /** カスタムノードタイプの登録 */
 const nodeTypes = { custom: CustomNode };
 
-/** ノードの基本幅（px） */
-const BASE_NODE_WIDTH = 80;
 /** ノードの高さ（px） */
 const NODE_HEIGHT = 40;
-/** パディング（左右合計、px） */
-const HORIZONTAL_PADDING = 32;
-/** 1文字あたりの概算幅（px） */
-const CHAR_WIDTH = 8;
-
-/**
- * テキストの長さからノードの概算幅を計算
- * layoutCalculator.tsと同じロジック
- */
-const calculateNodeWidth = (text: string): number => {
-  const textWidth = text.length * CHAR_WIDTH;
-  const totalWidth = Math.max(BASE_NODE_WIDTH, textWidth + HORIZONTAL_PADDING);
-  return totalWidth;
-};
 
 /** ドラッグ中の状態を保持 */
 interface DragState {
