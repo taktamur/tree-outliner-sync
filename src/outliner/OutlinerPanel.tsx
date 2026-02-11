@@ -5,9 +5,11 @@
  * ルートノードのみを直接レンダリングし、子ノードはOutlinerItemが再帰的に表示する。
  */
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useTreeStore } from '../store/treeStore';
 import { getChildren } from '../store/operations';
 import OutlinerItem from './OutlinerItem';
+import ConfirmDialog from '../shared/components/ConfirmDialog/ConfirmDialog';
 import './OutlinerPanel.css';
 
 /**
@@ -22,26 +24,63 @@ const OutlinerPanel = () => {
   const rootNodes = getChildren(nodes, null); // parentId === null のノードを取得
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [importText, setImportText] = useState('');
 
+  const handleImportClick = () => {
+    setIsImportModalOpen(true);
+  };
+
   const handleImport = () => {
-    if (importText.trim()) {
-      importFromScrapbox(importText);
-      setImportText('');
-      setIsImportModalOpen(false);
+    if (!importText.trim()) {
+      toast.error('インポートするテキストを入力してください');
+      return;
+    }
+
+    // 既存データがある場合は確認ダイアログを表示
+    if (nodes.length > 0) {
+      setIsConfirmDialogOpen(true);
+    } else {
+      executeImport();
     }
   };
 
+  const executeImport = () => {
+    try {
+      importFromScrapbox(importText);
+      setImportText('');
+      setIsImportModalOpen(false);
+      setIsConfirmDialogOpen(false);
+      toast.success('Scrapbox形式のテキストをインポートしました');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '不明なエラー';
+      toast.error(`インポートに失敗しました: ${errorMessage}`);
+      console.error('Import error:', error);
+    }
+  };
+
+  const handleCancelImport = () => {
+    setIsConfirmDialogOpen(false);
+  };
+
   const handleExport = () => {
-    const text = exportToScrapbox();
-    navigator.clipboard.writeText(text).then(
-      () => {
-        alert('Scrapbox形式のテキストをクリップボードにコピーしました');
-      },
-      () => {
-        alert('クリップボードへのコピーに失敗しました');
-      }
-    );
+    try {
+      const text = exportToScrapbox();
+      navigator.clipboard.writeText(text).then(
+        () => {
+          toast.success('Scrapbox形式のテキストをクリップボードにコピーしました');
+        },
+        (error) => {
+          const errorMessage = error instanceof Error ? error.message : '不明なエラー';
+          toast.error(`クリップボードへのコピーに失敗しました: ${errorMessage}`);
+          console.error('Clipboard error:', error);
+        }
+      );
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '不明なエラー';
+      toast.error(`エクスポートに失敗しました: ${errorMessage}`);
+      console.error('Export error:', error);
+    }
   };
 
   return (
@@ -52,7 +91,7 @@ const OutlinerPanel = () => {
           <div className="outliner-header-buttons">
             <button
               className="outliner-btn"
-              onClick={() => setIsImportModalOpen(true)}
+              onClick={handleImportClick}
               title="Scrapboxからインポート"
             >
               Import
@@ -96,6 +135,18 @@ const OutlinerPanel = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 確認ダイアログ */}
+      {isConfirmDialogOpen && (
+        <ConfirmDialog
+          title="データの上書き確認"
+          message="現在のデータは失われます。続行しますか?"
+          confirmLabel="続行"
+          cancelLabel="キャンセル"
+          onConfirm={executeImport}
+          onCancel={handleCancelImport}
+        />
       )}
     </div>
   );

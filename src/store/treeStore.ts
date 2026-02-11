@@ -151,11 +151,6 @@ export const useTreeStore = create<TreeStore>()(
   setNodes: (nodes) => set({ nodes }),
 
   importFromScrapbox: (text) => {
-    if (get().nodes.length > 0) {
-      if (!confirm('現在のデータは失われます。続行しますか?')) {
-        return;
-      }
-    }
     const nodes = parseScrapboxToTree(text);
     // Scrapboxインポート時はlocalStorageをクリア
     clearTreeState();
