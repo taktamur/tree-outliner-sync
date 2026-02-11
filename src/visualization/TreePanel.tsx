@@ -19,29 +19,11 @@ import '@xyflow/react/dist/style.css';
 import { useTreeStore } from '../store/treeStore';
 import { useTreeLayout } from './useTreeLayout';
 import CustomNode from './CustomNode';
+import { determineDropTarget, type NodeRect } from './dragCalculator';
 import './TreePanel.css';
 
 /** カスタムノードタイプの登録 */
 const nodeTypes = { custom: CustomNode };
-
-/** ノードの基本幅（px） */
-const BASE_NODE_WIDTH = 80;
-/** ノードの高さ（px） */
-const NODE_HEIGHT = 40;
-/** パディング（左右合計、px） */
-const HORIZONTAL_PADDING = 32;
-/** 1文字あたりの概算幅（px） */
-const CHAR_WIDTH = 8;
-
-/**
- * テキストの長さからノードの概算幅を計算
- * layoutCalculator.tsと同じロジック
- */
-const calculateNodeWidth = (text: string): number => {
-  const textWidth = text.length * CHAR_WIDTH;
-  const totalWidth = Math.max(BASE_NODE_WIDTH, textWidth + HORIZONTAL_PADDING);
-  return totalWidth;
-};
 
 /** ドラッグ中の状態を保持 */
 interface DragState {
@@ -78,43 +60,17 @@ const TreePanel = () => {
   }, [layout.nodes, layout.edges, setFlowNodes, setFlowEdges]);
 
   /**
-   * 最近接ノードを探す共通ロジック
+   * React FlowのNodeをNodeRectに変換するヘルパー
    */
-  const findClosestNode = useCallback(
-    (draggedNode: Node): { node: Node | null; distance: number } => {
-      // ドラッグされたノードの幅を計算
-      const draggedLabel = (draggedNode.data as { label?: string }).label || '...';
-      const draggedWidth = calculateNodeWidth(draggedLabel);
-      const draggedCenter = {
-        x: draggedNode.position.x + draggedWidth / 2,
-        y: draggedNode.position.y + NODE_HEIGHT / 2,
-      };
-
-      let closestNode: Node | null = null;
-      let closestDist = Infinity;
-
-      for (const n of layout.nodes) {
-        if (n.id === draggedNode.id) continue; // 自分自身は除外
-        // 各ノードの幅を計算
-        const nodeLabel = (n.data as { label?: string }).label || '...';
-        const nodeWidth = calculateNodeWidth(nodeLabel);
-        const nodeCenter = {
-          x: n.position.x + nodeWidth / 2,
-          y: n.position.y + NODE_HEIGHT / 2
-        };
-        const dist = Math.sqrt(
-          (draggedCenter.x - nodeCenter.x) ** 2 + (draggedCenter.y - nodeCenter.y) ** 2,
-        );
-        if (dist < closestDist) {
-          closestDist = dist;
-          closestNode = n;
-        }
-      }
-
-      return { node: closestNode, distance: closestDist };
-    },
-    [layout.nodes],
-  );
+  const nodeToRect = useCallback((node: Node): NodeRect => {
+    const label = (node.data as { label?: string }).label || '...';
+    return {
+      id: node.id,
+      x: node.position.x,
+      y: node.position.y,
+      label,
+    };
+  }, []);
 
   /**
    * 表示用のエッジを計算（ドラッグ中はプレビュー表示）
@@ -189,12 +145,14 @@ const TreePanel = () => {
    */
   const onNodeDrag: NodeMouseHandler = useCallback(
     (_event, draggedNode) => {
-      const { node: closestNode, distance: closestDist } =
-        findClosestNode(draggedNode);
+      // React FlowのNodeをNodeRectに変換
+      const dragged = nodeToRect(draggedNode);
+      const candidates = layout.nodes
+        .filter((n) => n.id !== draggedNode.id)
+        .map(nodeToRect);
 
-      // 120px以内にノードがあればプレビュー、なければnull（ルート化）
-      const hoverTargetId =
-        closestNode && closestDist < 120 ? closestNode.id : null;
+      // determineDropTargetを使ってドロップ先を判定
+      const hoverTargetId = determineDropTarget(dragged, candidates, 120);
 
       setDragState({
         nodeId: draggedNode.id,
@@ -202,7 +160,7 @@ const TreePanel = () => {
         originalParentId: dragState.originalParentId,
       });
     },
-    [findClosestNode, dragState.originalParentId],
+    [nodeToRect, layout.nodes, dragState.originalParentId],
   );
 
   /**
@@ -213,11 +171,14 @@ const TreePanel = () => {
    */
   const onNodeDragStop: NodeMouseHandler = useCallback(
     (_event, draggedNode) => {
-      const { node: closestNode, distance: closestDist } =
-        findClosestNode(draggedNode);
+      // React FlowのNodeをNodeRectに変換
+      const dragged = nodeToRect(draggedNode);
+      const candidates = layout.nodes
+        .filter((n) => n.id !== draggedNode.id)
+        .map(nodeToRect);
 
-      // ドロップ先の親IDを判定
-      const newParentId = closestNode && closestDist < 120 ? closestNode.id : null;
+      // determineDropTargetを使ってドロップ先を判定
+      const newParentId = determineDropTarget(dragged, candidates, 120);
 
       // ドラッグ開始時の親IDと比較（undefined チェック）
       const originalParentId = dragState.originalParentId ?? null;
@@ -230,7 +191,7 @@ const TreePanel = () => {
       // ドラッグ状態をリセット
       setDragState({ nodeId: null, hoverTargetId: null, originalParentId: undefined });
     },
-    [findClosestNode, move, dragState.originalParentId],
+    [nodeToRect, layout.nodes, move, dragState.originalParentId],
   );
 
   return (
