@@ -8,6 +8,12 @@
  * - 左パネル: OutlinerPanel（テキストベースの階層編集）
  * - 右パネル: TreePanel（ビジュアルツリー表示とD&D操作）
  * - 下部: ShortcutBar（キーボードショートカット一覧）
+ *
+ * 【スナップショットテスト不要理由】
+ * - localStorage依存（テスト環境での再現性が低い）
+ * - パネルリサイズロジックなど複雑な状態管理を含む
+ * - E2Eテストでの検証がより適切
+ * → 今後、リファクタリングでロジックを分離し、純粋なプレゼンテーション部分を切り出すことを検討
  */
 import { useState, useEffect } from 'react';
 import OutlinerPanel from './outliner/OutlinerPanel';
