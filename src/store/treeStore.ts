@@ -22,6 +22,9 @@ import {
 } from '../outliner/scrapboxConverter';
 import { saveTreeState, loadTreeState, clearTreeState } from '../utils/storage';
 
+/** 履歴の最大保持数 */
+const MAX_HISTORY_SIZE = 50;
+
 /**
  * ツリーストアの型定義
  */
@@ -30,6 +33,12 @@ interface TreeStore {
   nodes: TreeNode[];
   /** 現在選択されているノードのID（未選択時は null） */
   selectedNodeId: string | null;
+
+  // 履歴管理
+  /** undo用の過去の状態スタック */
+  past: TreeNode[][];
+  /** redo用の未来の状態スタック */
+  future: TreeNode[][];
 
   // ノード操作
   /** ノードのテキストを更新 */
@@ -44,6 +53,16 @@ interface TreeStore {
   remove: (id: string) => void;
   /** ノードを別の親ノードの下に移動（D&D用） */
   move: (nodeId: string, newParentId: string | null) => void;
+
+  // undo/redo
+  /** 操作を取り消す */
+  undo: () => void;
+  /** 取り消した操作をやり直す */
+  redo: () => void;
+  /** undoが可能かどうか */
+  canUndo: () => boolean;
+  /** redoが可能かどうか */
+  canRedo: () => boolean;
 
   // 選択
   /** 選択中のノードIDを設定 */
@@ -108,21 +127,36 @@ export const useTreeStore = create<TreeStore>()(
   subscribeWithSelector((set, get) => ({
     nodes: getInitialData(),
     selectedNodeId: null,
+    past: [],
+    future: [],
 
   updateNodeText: (id, text) => {
     set((state) => ({
       nodes: state.nodes.map((n) => (n.id === id ? { ...n, text } : n)),
+      // updateNodeTextは履歴管理から除外（タイピング中の各文字を記録しないため）
     }));
   },
 
   indent: (id) => {
     const result = indentNode(get().nodes, id);
-    if (result) set({ nodes: result });
+    if (result) {
+      set((state) => ({
+        nodes: result,
+        past: [...state.past, state.nodes].slice(-MAX_HISTORY_SIZE),
+        future: [], // 新しい操作をしたらredoスタックをクリア
+      }));
+    }
   },
 
   outdent: (id) => {
     const result = outdentNode(get().nodes, id);
-    if (result) set({ nodes: result });
+    if (result) {
+      set((state) => ({
+        nodes: result,
+        past: [...state.past, state.nodes].slice(-MAX_HISTORY_SIZE),
+        future: [],
+      }));
+    }
   },
 
   addAfter: (afterId) => {
@@ -131,6 +165,8 @@ export const useTreeStore = create<TreeStore>()(
     set((state) => ({
       nodes: addNodeAfter(state.nodes, afterId, newNode),
       selectedNodeId: newId, // 新ノードを自動選択
+      past: [...state.past, state.nodes].slice(-MAX_HISTORY_SIZE),
+      future: [],
     }));
     return newId;
   },
@@ -138,13 +174,53 @@ export const useTreeStore = create<TreeStore>()(
   remove: (id) => {
     set((state) => ({
       nodes: deleteNode(state.nodes, id),
+      past: [...state.past, state.nodes].slice(-MAX_HISTORY_SIZE),
+      future: [],
     }));
   },
 
   move: (nodeId, newParentId) => {
     const result = moveNode(get().nodes, nodeId, newParentId);
-    if (result) set({ nodes: result });
+    if (result) {
+      set((state) => ({
+        nodes: result,
+        past: [...state.past, state.nodes].slice(-MAX_HISTORY_SIZE),
+        future: [],
+      }));
+    }
   },
+
+  undo: () => {
+    const { past, nodes } = get();
+    if (past.length === 0) return;
+
+    const previous = past[past.length - 1];
+    const newPast = past.slice(0, -1);
+
+    set({
+      past: newPast,
+      nodes: previous,
+      future: [nodes, ...get().future].slice(0, MAX_HISTORY_SIZE),
+    });
+  },
+
+  redo: () => {
+    const { future, nodes } = get();
+    if (future.length === 0) return;
+
+    const next = future[0];
+    const newFuture = future.slice(1);
+
+    set({
+      past: [...get().past, nodes].slice(-MAX_HISTORY_SIZE),
+      nodes: next,
+      future: newFuture,
+    });
+  },
+
+  canUndo: () => get().past.length > 0,
+
+  canRedo: () => get().future.length > 0,
 
   setSelectedNodeId: (id) => set({ selectedNodeId: id }),
 
