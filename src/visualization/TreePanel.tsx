@@ -168,6 +168,7 @@ const TreePanel = () => {
    *
    * ドロップ位置から新しい親を判定し、ドラッグ開始時の親と異なる場合のみ移動する。
    * これにより、「レイアウト調整のためのドラッグ」と「親子関係変更のためのドラッグ」を区別できる。
+   * 親が変わらない場合は、レイアウト位置に戻すため強制的に再レイアウトする。
    */
   const onNodeDragStop: NodeMouseHandler = useCallback(
     (_event, draggedNode) => {
@@ -186,12 +187,15 @@ const TreePanel = () => {
       // 親が実際に変わった場合のみ move() を実行
       if (newParentId !== originalParentId) {
         move(draggedNode.id, newParentId);
+      } else {
+        // 親が変わらない場合は、元のレイアウト位置に戻す
+        setFlowNodes(layoutNodes);
       }
 
       // ドラッグ状態をリセット
       setDragState({ nodeId: null, hoverTargetId: null, originalParentId: undefined });
     },
-    [nodeToRect, layoutNodes, move, dragState.originalParentId],
+    [nodeToRect, layoutNodes, move, dragState.originalParentId, setFlowNodes],
   );
 
   return (
