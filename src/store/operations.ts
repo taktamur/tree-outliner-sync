@@ -125,6 +125,63 @@ export const deleteNode = (nodes: TreeNode[], nodeId: string): TreeNode[] => {
 };
 
 /**
+ * ノードを指定ノードの直前に兄弟として挿入
+ *
+ * @param nodes ツリーノードの配列
+ * @param nodeId 移動するノードのID
+ * @param targetNodeId 挿入先のターゲットノードID
+ * @returns 更新後のノード配列（移動不可の場合はnull）
+ */
+export const moveNodeBefore = (
+  nodes: TreeNode[],
+  nodeId: string,
+  targetNodeId: string,
+): TreeNode[] | null => {
+  const targetNode = nodes.find((n) => n.id === targetNodeId);
+  if (!targetNode) return null;
+
+  // ターゲットノードと同じ親、orderは-0.5
+  return moveNode(nodes, nodeId, targetNode.parentId, targetNode.order - 0.5);
+};
+
+/**
+ * ノードを指定ノードの直後に兄弟として挿入
+ *
+ * @param nodes ツリーノードの配列
+ * @param nodeId 移動するノードのID
+ * @param targetNodeId 挿入先のターゲットノードID
+ * @returns 更新後のノード配列（移動不可の場合はnull）
+ */
+export const moveNodeAfter = (
+  nodes: TreeNode[],
+  nodeId: string,
+  targetNodeId: string,
+): TreeNode[] | null => {
+  const targetNode = nodes.find((n) => n.id === targetNodeId);
+  if (!targetNode) return null;
+
+  // ターゲットノードと同じ親、orderは+0.5
+  return moveNode(nodes, nodeId, targetNode.parentId, targetNode.order + 0.5);
+};
+
+/**
+ * ノードを指定ノードの子の先頭に挿入
+ *
+ * @param nodes ツリーノードの配列
+ * @param nodeId 移動するノードのID
+ * @param targetNodeId 新しい親ノードのID
+ * @returns 更新後のノード配列（移動不可の場合はnull）
+ */
+export const moveNodeAsFirstChild = (
+  nodes: TreeNode[],
+  nodeId: string,
+  targetNodeId: string,
+): TreeNode[] | null => {
+  // ターゲットノードを親とし、orderは-0.5で先頭に配置
+  return moveNode(nodes, nodeId, targetNodeId, -0.5);
+};
+
+/**
  * ノード移動: あるノードを別のノードの子にする（D&D用）
  * 循環参照チェック付き
  *

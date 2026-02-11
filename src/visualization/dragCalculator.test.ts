@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findClosestNode, determineDropTarget, type NodeRect } from './dragCalculator';
+import { findClosestNode, determineDropTarget, determineInsertMode, type NodeRect } from './dragCalculator';
 
 describe('dragCalculator', () => {
   describe('findClosestNode', () => {
@@ -80,12 +80,54 @@ describe('dragCalculator', () => {
     });
   });
 
+  describe('determineInsertMode', () => {
+    it('should return "before" when dragged to upper zone (top 1/3)', () => {
+      const targetNode: NodeRect = { id: 'target', x: 100, y: 100, label: 'Target' };
+
+      // 上側ゾーン: y < 100 + 40/3 = 113.33
+      expect(determineInsertMode(105, targetNode)).toBe('before');
+      expect(determineInsertMode(110, targetNode)).toBe('before');
+    });
+
+    it('should return "child" when dragged to middle zone (middle 1/3)', () => {
+      const targetNode: NodeRect = { id: 'target', x: 100, y: 100, label: 'Target' };
+
+      // 中央ゾーン: 113.33 <= y <= 126.67
+      expect(determineInsertMode(120, targetNode)).toBe('child');
+    });
+
+    it('should return "after" when dragged to lower zone (bottom 1/3)', () => {
+      const targetNode: NodeRect = { id: 'target', x: 100, y: 100, label: 'Target' };
+
+      // 下側ゾーン: y > 100 + 80/3 = 126.67
+      expect(determineInsertMode(130, targetNode)).toBe('after');
+      expect(determineInsertMode(135, targetNode)).toBe('after');
+    });
+
+    it('should handle boundary values correctly', () => {
+      const targetNode: NodeRect = { id: 'target', x: 0, y: 0, label: 'Target' };
+
+      // upperBound = NODE_HEIGHT / 3 = 13.33
+      // lowerBound = (NODE_HEIGHT * 2) / 3 = 26.67
+
+      // 境界値の少し下
+      expect(determineInsertMode(13, targetNode)).toBe('before');
+
+      // 境界値付近（中央ゾーン）
+      expect(determineInsertMode(14, targetNode)).toBe('child');
+      expect(determineInsertMode(26, targetNode)).toBe('child');
+
+      // 境界値の少し上
+      expect(determineInsertMode(27, targetNode)).toBe('after');
+    });
+  });
+
   describe('determineDropTarget', () => {
-    it('should return nodeId when within threshold', () => {
+    it('should return nodeId with insertMode when within threshold', () => {
       const dragged: NodeRect = {
         id: 'dragged',
         x: 100,
-        y: 100,
+        y: 100, // 中心Y座標: 100 + 20 = 120
         label: 'Dragged',
       };
 
@@ -95,7 +137,9 @@ describe('dragCalculator', () => {
 
       const result = determineDropTarget(dragged, candidates, 120);
 
-      expect(result).toEqual({ parentId: 'node1' });
+      expect(result.parentId).toBe('node1');
+      expect(result.insertMode).toBe('child'); // 中心Y座標120は中央ゾーン
+      expect(result.targetNodeId).toBe('node1');
     });
 
     it('should return null when exceeding threshold', () => {
@@ -119,7 +163,7 @@ describe('dragCalculator', () => {
       const dragged: NodeRect = {
         id: 'dragged',
         x: 100,
-        y: 100,
+        y: 100, // 中心Y座標: 100 + 20 = 120
         label: 'Dragged',
       };
 
@@ -130,7 +174,9 @@ describe('dragCalculator', () => {
       // 閾値を指定しない（デフォルト120px）
       const result = determineDropTarget(dragged, candidates);
 
-      expect(result).toEqual({ parentId: 'node1' });
+      expect(result.parentId).toBe('node1');
+      expect(result.insertMode).toBe('child'); // 中心Y座標120は中央ゾーン
+      expect(result.targetNodeId).toBe('node1');
     });
 
     it('should handle boundary case (exactly at threshold)', () => {
@@ -150,7 +196,9 @@ describe('dragCalculator', () => {
 
       // 距離119px、閾値120pxの場合 → 範囲内
       const result1 = determineDropTarget(dragged, candidates, 120);
-      expect(result1).toEqual({ parentId: 'node1' });
+      expect(result1.parentId).toBe('node1');
+      expect(result1.insertMode).toBe('child'); // 中心Y座標20は中央ゾーン
+      expect(result1.targetNodeId).toBe('node1');
 
       // 距離119px、閾値119pxの場合 → 範囲外（distance < threshold なので）
       const result2 = determineDropTarget(dragged, candidates, 119);
@@ -174,7 +222,7 @@ describe('dragCalculator', () => {
       const dragged: NodeRect = {
         id: 'dragged',
         x: 100,
-        y: 100,
+        y: 100, // 中心Y座標: 100 + 20 = 120
         label: 'Dragged',
       };
 
@@ -186,7 +234,10 @@ describe('dragCalculator', () => {
       expect(determineDropTarget(dragged, candidates, 30)).toEqual({ parentId: null });
 
       // 閾値100pxの場合は範囲内
-      expect(determineDropTarget(dragged, candidates, 100)).toEqual({ parentId: 'node1' });
+      const result = determineDropTarget(dragged, candidates, 100);
+      expect(result.parentId).toBe('node1');
+      expect(result.insertMode).toBe('child'); // 中心Y座標120は中央ゾーン
+      expect(result.targetNodeId).toBe('node1');
     });
   });
 });
