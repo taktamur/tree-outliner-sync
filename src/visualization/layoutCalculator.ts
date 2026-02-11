@@ -4,7 +4,7 @@
  * dagreライブラリを使用してツリー構造をLR（左→右）方向にレイアウトする。
  * 複数のルートノードがある場合は、それぞれを個別にレイアウトして縦方向に積み重ねる。
  */
-import dagre from 'dagre';
+import dagre from '@dagrejs/dagre';
 import type { TreeNode } from '../store/types';
 import { getChildren } from '../store/operations';
 

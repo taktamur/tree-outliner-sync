@@ -12,7 +12,7 @@
 
 - React 19 + TypeScript + Vite
 - @xyflow/react（React Flow）: ツリー可視化
-- dagre: LRレイアウト計算
+- @dagrejs/dagre: LRレイアウト計算
 - Zustand: 状態管理
 
 ## 開発コマンド
@@ -43,7 +43,7 @@ npm run lint     # ESLint
 
 ### dagre の利用
 
-- `@dagrejs/dagre` (v1) は Vite の ESM 環境で dynamic require エラーが出るため、`dagre` (v0.8) を使用
+- `@dagrejs/dagre` (v2.0+) を使用（v1 で発生していた Vite の ESM 環境での dynamic require エラーは v2 で解決済み）
 - 複数ルートは個別に dagre レイアウトして Y オフセットで縦積み
 
 ### ツリー D&D
