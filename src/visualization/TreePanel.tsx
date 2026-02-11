@@ -40,7 +40,7 @@ interface DragState {
  */
 const TreePanel = () => {
   const { setSelectedNodeId, move } = useTreeStore();
-  const { nodes: layoutNodes, edges: layoutEdges, isLayouting } = useTreeLayout();
+  const { nodes: layoutNodes, edges: layoutEdges } = useTreeLayout();
 
   // React Flow用のノードとエッジの状態管理
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(layoutNodes);
@@ -198,23 +198,6 @@ const TreePanel = () => {
     <div className="tree-panel">
       <div className="tree-header">Tree Visualization</div>
       <div className="tree-content">
-        {isLayouting && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 1000,
-              background: 'rgba(255, 255, 255, 0.9)',
-              padding: '12px 24px',
-              borderRadius: '4px',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-            }}
-          >
-            Computing layout...
-          </div>
-        )}
         <ReactFlow
           nodes={flowNodes}
           edges={displayEdges}
