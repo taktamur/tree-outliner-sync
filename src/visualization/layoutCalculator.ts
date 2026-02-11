@@ -4,7 +4,6 @@
  * elkjsライブラリを使用してツリー構造をLR（左→右）方向にレイアウトする。
  * 複数のルートノードがある場合は、それぞれを個別にレイアウトして縦方向に積み重ねる。
  */
-import type ELK from 'elkjs/lib/elk.bundled.js';
 import type { ElkNode, ElkExtendedEdge } from 'elkjs/lib/elk-api';
 import type { TreeNode } from '../store/types';
 import { getChildren } from '../store/operations';
@@ -53,13 +52,17 @@ export const calculateNodeWidth = (text: string): number => {
   return totalWidth;
 };
 
+/** ELKの型定義 */
+type ELKConstructor = typeof import('elkjs/lib/elk.bundled.js').default;
+type ELKInstance = InstanceType<ELKConstructor>;
+
 /** elkインスタンスのキャッシュ */
-let elkInstance: ELK | null = null;
+let elkInstance: ELKInstance | null = null;
 
 /**
  * elkインスタンスを取得（初回のみ動的import）
  */
-const getElk = async (): Promise<ELK> => {
+const getElk = async (): Promise<ELKInstance> => {
   if (!elkInstance) {
     const ELK = (await import('elkjs/lib/elk.bundled.js')).default;
     elkInstance = new ELK();
