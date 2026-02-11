@@ -6,6 +6,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
+import { ReactFlowProvider } from '@xyflow/react';
 import CustomNode from './CustomNode';
 import type { NodeProps } from '@xyflow/react';
 
@@ -29,7 +30,11 @@ describe('CustomNode', () => {
       positionAbsoluteY: 0,
     } as NodeProps;
 
-    const { container } = render(<CustomNode {...props} />);
+    const { container } = render(
+      <ReactFlowProvider>
+        <CustomNode {...props} />
+      </ReactFlowProvider>
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 
@@ -51,7 +56,11 @@ describe('CustomNode', () => {
       positionAbsoluteY: 0,
     } as NodeProps;
 
-    const { container } = render(<CustomNode {...props} />);
+    const { container } = render(
+      <ReactFlowProvider>
+        <CustomNode {...props} />
+      </ReactFlowProvider>
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 
@@ -73,7 +82,11 @@ describe('CustomNode', () => {
       positionAbsoluteY: 0,
     } as NodeProps;
 
-    const { container } = render(<CustomNode {...props} />);
+    const { container } = render(
+      <ReactFlowProvider>
+        <CustomNode {...props} />
+      </ReactFlowProvider>
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 });
