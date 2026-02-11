@@ -11,6 +11,7 @@ import {
   Controls,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type Node,
   type Edge,
   type NodeMouseHandler,
@@ -19,18 +20,83 @@ import '@xyflow/react/dist/style.css';
 import { useTreeStore } from '../store/treeStore';
 import { useTreeLayout } from './useTreeLayout';
 import CustomNode from './CustomNode';
-import { determineDropTarget, type NodeRect, type DropTarget } from './dragCalculator';
+import { determineDropTarget, type NodeRect, type DropTarget, type InsertMode } from './dragCalculator';
 import './TreePanel.css';
 
 /** カスタムノードタイプの登録 */
 const nodeTypes = { custom: CustomNode };
 
+/** プレビューライン表示用のコンポーネント */
+const PreviewLine = ({ dragState, layoutNodes }: { dragState: DragState; layoutNodes: Node[] }) => {
+  const { getViewport } = useReactFlow();
+
+  // insertModeがない、またはtargetNodeIdがない場合は何も表示しない
+  if (!dragState.insertMode || !dragState.targetNodeId) {
+    return null;
+  }
+
+  // CHILDモードの場合はエッジプレビューのみなので何も表示しない
+  if (dragState.insertMode === 'child') {
+    return null;
+  }
+
+  // ターゲットノードを取得
+  const targetNode = layoutNodes.find((n) => n.id === dragState.targetNodeId);
+  if (!targetNode) {
+    return null;
+  }
+
+  // ターゲットノードの幅を計算
+  const targetLabel = (targetNode.data as { label?: string }).label || '...';
+  const targetWidth = targetLabel.length * 8 + 32; // CHAR_WIDTH=8, HORIZONTAL_PADDING=32
+
+  // プレビューラインのY座標を計算
+  const NODE_HEIGHT = 40;
+  let lineY: number;
+  if (dragState.insertMode === 'before') {
+    // 上側ゾーン: ノードの上端
+    lineY = targetNode.position.y;
+  } else {
+    // 下側ゾーン: ノードの下端
+    lineY = targetNode.position.y + NODE_HEIGHT;
+  }
+
+  const viewport = getViewport();
+
+  return (
+    <svg
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex: 1000,
+      }}
+    >
+      <line
+        x1={(targetNode.position.x) * viewport.zoom + viewport.x}
+        y1={lineY * viewport.zoom + viewport.y}
+        x2={(targetNode.position.x + targetWidth) * viewport.zoom + viewport.x}
+        y2={lineY * viewport.zoom + viewport.y}
+        stroke="#22c55e"
+        strokeWidth={2}
+        strokeDasharray="5,5"
+      />
+    </svg>
+  );
+};
+
 /** ドラッグ中の状態を保持 */
 interface DragState {
   nodeId: string | null;
-  hoverTargetId: string | null;
   /** ドラッグ開始時の親ID（親ID比較用） */
   originalParentId: string | null | undefined;
+  /** 挿入モード（プレビュー表示用） */
+  insertMode?: InsertMode;
+  /** ドロップターゲットのノードID（プレビュー表示用） */
+  targetNodeId?: string;
 }
 
 /**
@@ -39,7 +105,7 @@ interface DragState {
  * React Flowでツリーをレンダリングし、D&D操作を可能にする。
  */
 const TreePanel = () => {
-  const { setSelectedNodeId, move } = useTreeStore();
+  const { setSelectedNodeId, move, moveBefore, moveAfter, moveAsFirstChild } = useTreeStore();
   const { nodes: layoutNodes, edges: layoutEdges } = useTreeLayout();
 
   // React Flow用のノードとエッジの状態管理
@@ -49,7 +115,6 @@ const TreePanel = () => {
   // ドラッグ中の状態を管理（プレビュー表示用）
   const [dragState, setDragState] = useState<DragState>({
     nodeId: null,
-    hoverTargetId: null,
     originalParentId: undefined,
   });
 
@@ -73,7 +138,7 @@ const TreePanel = () => {
   }, []);
 
   /**
-   * 表示用のエッジを計算（ドラッグ中はプレビュー表示）
+   * 表示用のエッジを計算（ドラッグ中は旧親との接続を隠す）
    */
   const displayEdges = useMemo<Edge[]>(() => {
     if (!dragState.nodeId) {
@@ -82,26 +147,9 @@ const TreePanel = () => {
     }
 
     // ドラッグ中のノードへのエッジを除外（旧親との接続を隠す）
-    const filteredEdges = layoutEdges.filter(
+    return layoutEdges.filter(
       (edge) => edge.target !== dragState.nodeId,
     );
-
-    // プレビューエッジを追加（hoverTargetIdがある場合のみ）
-    if (dragState.hoverTargetId) {
-      const previewEdge: Edge = {
-        id: `preview-${dragState.nodeId}-${dragState.hoverTargetId}`,
-        source: dragState.hoverTargetId,
-        target: dragState.nodeId,
-        style: { stroke: '#22c55e', strokeWidth: 2 },
-        animated: true,
-        type: 'smoothstep',
-        // @ts-expect-error strokeDasharray is not in Edge type but works
-        strokeDasharray: '5,5',
-      };
-      return [...filteredEdges, previewEdge];
-    }
-
-    return filteredEdges;
   }, [layoutEdges, dragState]);
 
   /**
@@ -130,7 +178,6 @@ const TreePanel = () => {
 
       setDragState({
         nodeId: node.id,
-        hoverTargetId: null,
         originalParentId,
       });
     },
@@ -151,24 +198,33 @@ const TreePanel = () => {
         .filter((n) => n.id !== draggedNode.id)
         .map(nodeToRect);
 
+      // 子の有無を判定する関数
+      const { nodes } = useTreeStore.getState();
+      const getHasChildren = (nodeId: string) => {
+        return nodes.some((n) => n.parentId === nodeId);
+      };
+
       // determineDropTargetを使ってドロップ先を判定
-      const dropTarget: DropTarget = determineDropTarget(dragged, candidates, 120);
+      const dropTarget: DropTarget = determineDropTarget(dragged, candidates, 120, getHasChildren);
 
       setDragState({
         nodeId: draggedNode.id,
-        hoverTargetId: dropTarget.parentId,
         originalParentId: dragState.originalParentId,
+        insertMode: dropTarget.insertMode,
+        targetNodeId: dropTarget.targetNodeId,
       });
     },
     [nodeToRect, layoutNodes, dragState.originalParentId],
   );
 
   /**
-   * ノードドラッグ終了時の処理（親ID比較方式）
+   * ノードドラッグ終了時の処理
    *
-   * ドロップ位置から新しい親を判定し、ドラッグ開始時の親と異なる場合のみ移動する。
-   * これにより、「レイアウト調整のためのドラッグ」と「親子関係変更のためのドラッグ」を区別できる。
-   * 親が変わらない場合は、レイアウト位置に戻すため強制的に再レイアウトする。
+   * ドロップ位置から新しい親と挿入位置を判定し、挿入モードに応じて移動する。
+   * insertModeに応じて適切な関数を呼び出す：
+   * - before: moveNodeBefore（兄弟として直前に挿入）
+   * - after: moveNodeAfter（兄弟として直後に挿入）
+   * - child: moveNodeAsFirstChild（子の先頭に挿入）
    */
   const onNodeDragStop: NodeMouseHandler = useCallback(
     (_event, draggedNode) => {
@@ -178,24 +234,58 @@ const TreePanel = () => {
         .filter((n) => n.id !== draggedNode.id)
         .map(nodeToRect);
 
+      // 子の有無を判定する関数
+      const { nodes } = useTreeStore.getState();
+      const getHasChildren = (nodeId: string) => {
+        return nodes.some((n) => n.parentId === nodeId);
+      };
+
       // determineDropTargetを使ってドロップ先を判定
-      const dropTarget: DropTarget = determineDropTarget(dragged, candidates, 120);
+      const dropTarget: DropTarget = determineDropTarget(dragged, candidates, 120, getHasChildren);
 
-      // ドラッグ開始時の親IDと比較（undefined チェック）
-      const originalParentId = dragState.originalParentId ?? null;
-
-      // 親が実際に変わった場合のみ move() を実行
-      if (dropTarget.parentId !== originalParentId) {
-        move(draggedNode.id, dropTarget.parentId, dropTarget.insertOrder);
+      // insertModeがない場合（閾値超過でルート化）は、従来通りmove()を使用
+      if (!dropTarget.insertMode || !dropTarget.targetNodeId) {
+        const originalParentId = dragState.originalParentId ?? null;
+        if (dropTarget.parentId !== originalParentId) {
+          move(draggedNode.id, dropTarget.parentId, dropTarget.insertOrder);
+        } else {
+          setFlowNodes(layoutNodes);
+        }
       } else {
-        // 親が変わらない場合は、元のレイアウト位置に戻す
-        setFlowNodes(layoutNodes);
+        // ターゲットノードを取得してルートノードかどうか判定
+        const targetNode = nodes.find((n) => n.id === dropTarget.targetNodeId);
+        const isTargetRoot = targetNode?.parentId === null;
+
+        // ルートノードの場合の特殊処理
+        if (isTargetRoot) {
+          if (dropTarget.insertMode === 'before') {
+            // ルートノードの直前に挿入（ルート化）
+            moveBefore(draggedNode.id, dropTarget.targetNodeId);
+          } else if (dropTarget.insertMode === 'child' || dropTarget.insertMode === 'after') {
+            // 中央ゾーンと下側ゾーンは直後に挿入（ルート化）
+            moveAfter(draggedNode.id, dropTarget.targetNodeId);
+          }
+        } else {
+          // 通常のノードの場合
+          if (dropTarget.insertMode === 'before') {
+            moveBefore(draggedNode.id, dropTarget.targetNodeId);
+          } else if (dropTarget.insertMode === 'after') {
+            moveAfter(draggedNode.id, dropTarget.targetNodeId);
+          } else if (dropTarget.insertMode === 'child') {
+            moveAsFirstChild(draggedNode.id, dropTarget.targetNodeId);
+          }
+        }
       }
 
       // ドラッグ状態をリセット
-      setDragState({ nodeId: null, hoverTargetId: null, originalParentId: undefined });
+      setDragState({
+        nodeId: null,
+        originalParentId: undefined,
+        insertMode: undefined,
+        targetNodeId: undefined,
+      });
     },
-    [nodeToRect, layoutNodes, move, dragState.originalParentId, setFlowNodes],
+    [nodeToRect, layoutNodes, move, moveBefore, moveAfter, moveAsFirstChild, dragState.originalParentId, setFlowNodes],
   );
 
   return (
@@ -220,6 +310,7 @@ const TreePanel = () => {
         >
           <Background />
           <Controls />
+          <PreviewLine dragState={dragState} layoutNodes={layoutNodes} />
         </ReactFlow>
       </div>
     </div>

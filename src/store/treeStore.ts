@@ -15,6 +15,9 @@ import {
   addNodeAfter,
   deleteNode,
   moveNode,
+  moveNodeBefore,
+  moveNodeAfter,
+  moveNodeAsFirstChild,
 } from './operations';
 import {
   parseScrapboxToTree,
@@ -53,6 +56,12 @@ interface TreeStore {
   remove: (id: string) => void;
   /** ノードを別の親ノードの下に移動（D&D用） */
   move: (nodeId: string, newParentId: string | null, insertOrder?: number) => void;
+  /** ノードを指定ノードの直前に兄弟として挿入 */
+  moveBefore: (nodeId: string, targetNodeId: string) => void;
+  /** ノードを指定ノードの直後に兄弟として挿入 */
+  moveAfter: (nodeId: string, targetNodeId: string) => void;
+  /** ノードを指定ノードの子の先頭に挿入 */
+  moveAsFirstChild: (nodeId: string, targetNodeId: string) => void;
 
   // undo/redo
   /** 操作を取り消す */
@@ -181,6 +190,39 @@ export const useTreeStore = create<TreeStore>()(
 
   move: (nodeId, newParentId, insertOrder) => {
     const result = moveNode(get().nodes, nodeId, newParentId, insertOrder);
+    if (result) {
+      set((state) => ({
+        nodes: result,
+        past: [...state.past, state.nodes].slice(-MAX_HISTORY_SIZE),
+        future: [],
+      }));
+    }
+  },
+
+  moveBefore: (nodeId, targetNodeId) => {
+    const result = moveNodeBefore(get().nodes, nodeId, targetNodeId);
+    if (result) {
+      set((state) => ({
+        nodes: result,
+        past: [...state.past, state.nodes].slice(-MAX_HISTORY_SIZE),
+        future: [],
+      }));
+    }
+  },
+
+  moveAfter: (nodeId, targetNodeId) => {
+    const result = moveNodeAfter(get().nodes, nodeId, targetNodeId);
+    if (result) {
+      set((state) => ({
+        nodes: result,
+        past: [...state.past, state.nodes].slice(-MAX_HISTORY_SIZE),
+        future: [],
+      }));
+    }
+  },
+
+  moveAsFirstChild: (nodeId, targetNodeId) => {
+    const result = moveNodeAsFirstChild(get().nodes, nodeId, targetNodeId);
     if (result) {
       set((state) => ({
         nodes: result,

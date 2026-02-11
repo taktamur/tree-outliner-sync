@@ -11,6 +11,9 @@ import {
   addNodeAfter,
   deleteNode,
   moveNode,
+  moveNodeBefore,
+  moveNodeAfter,
+  moveNodeAsFirstChild,
 } from './operations';
 
 describe('treeOperations', () => {
@@ -332,6 +335,92 @@ describe('treeOperations', () => {
       expect(result).not.toBeNull();
       const child = result!.find((n) => n.id === 'child');
       expect(child?.parentId).toBeNull();
+    });
+  });
+
+  describe('moveNodeBefore', () => {
+    it('should move node before target node as sibling', () => {
+      const nodes: TreeNode[] = [
+        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: 'child1', text: 'Child 1', parentId: 'root', order: 0 },
+        { id: 'child2', text: 'Child 2', parentId: 'root', order: 1 },
+        { id: 'child3', text: 'Child 3', parentId: 'root', order: 2 },
+      ];
+
+      // child3をchild2の直前に移動
+      const result = moveNodeBefore(nodes, 'child3', 'child2');
+      expect(result).not.toBeNull();
+
+      const children = getChildren(result!, 'root');
+      expect(children[0].id).toBe('child1');
+      expect(children[1].id).toBe('child3'); // child2の直前
+      expect(children[2].id).toBe('child2');
+    });
+
+    it('should return null if target node not found', () => {
+      const nodes: TreeNode[] = [
+        { id: 'root', text: 'Root', parentId: null, order: 0 },
+      ];
+      const result = moveNodeBefore(nodes, 'root', 'nonexistent');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('moveNodeAfter', () => {
+    it('should move node after target node as sibling', () => {
+      const nodes: TreeNode[] = [
+        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: 'child1', text: 'Child 1', parentId: 'root', order: 0 },
+        { id: 'child2', text: 'Child 2', parentId: 'root', order: 1 },
+        { id: 'child3', text: 'Child 3', parentId: 'root', order: 2 },
+      ];
+
+      // child1をchild2の直後に移動
+      const result = moveNodeAfter(nodes, 'child1', 'child2');
+      expect(result).not.toBeNull();
+
+      const children = getChildren(result!, 'root');
+      expect(children[0].id).toBe('child2');
+      expect(children[1].id).toBe('child1'); // child2の直後
+      expect(children[2].id).toBe('child3');
+    });
+
+    it('should return null if target node not found', () => {
+      const nodes: TreeNode[] = [
+        { id: 'root', text: 'Root', parentId: null, order: 0 },
+      ];
+      const result = moveNodeAfter(nodes, 'root', 'nonexistent');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('moveNodeAsFirstChild', () => {
+    it('should move node as first child of target node', () => {
+      const nodes: TreeNode[] = [
+        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: 'child1', text: 'Child 1', parentId: 'root', order: 0 },
+        { id: 'child2', text: 'Child 2', parentId: 'root', order: 1 },
+        { id: 'grandchild', text: 'Grandchild', parentId: 'child1', order: 0 },
+      ];
+
+      // child2をchild1の子の先頭に移動
+      const result = moveNodeAsFirstChild(nodes, 'child2', 'child1');
+      expect(result).not.toBeNull();
+
+      const children = getChildren(result!, 'child1');
+      expect(children[0].id).toBe('child2'); // 先頭
+      expect(children[1].id).toBe('grandchild');
+    });
+
+    it('should prevent circular reference', () => {
+      const nodes: TreeNode[] = [
+        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: 'child', text: 'Child', parentId: 'root', order: 0 },
+      ];
+
+      // rootをchildの子にしようとする（循環参照）
+      const result = moveNodeAsFirstChild(nodes, 'root', 'child');
+      expect(result).toBeNull();
     });
   });
 });

@@ -20,12 +20,19 @@ export interface ClosestNodeResult {
   distance: number;
 }
 
+/** 挿入モード */
+export type InsertMode = 'before' | 'child' | 'after';
+
 /** ドロップ先の情報 */
 export interface DropTarget {
   /** ドロップ先の親ノードID（nullの場合はルート化） */
   parentId: string | null;
   /** 挿入位置のorder値（undefinedの場合は末尾に追加） */
   insertOrder?: number;
+  /** 挿入モード（プレビュー表示用） */
+  insertMode?: InsertMode;
+  /** ドロップターゲットのノードID（プレビュー表示用） */
+  targetNodeId?: string;
 }
 
 /**
@@ -79,6 +86,48 @@ export const findClosestNode = (
 };
 
 /**
+ * ドロップゾーンを判定（ノードを縦3分割、子なしノードは右側検出も行う）
+ *
+ * ドラッグされたノードのY座標から、ターゲットノードのどのゾーンにドロップするかを判定する。
+ * - 上側ゾーン（上1/3）: 兄弟として直前に挿入
+ * - 中央ゾーン（中央1/3）: 子ノードとして先頭に挿入
+ * - 下側ゾーン（下1/3）: 兄弟として直後に挿入
+ *
+ * 子のないノードの場合、右側2/3にドロップすると中央ゾーン扱いにして子挿入を優先する。
+ *
+ * @param draggedCenterY ドラッグされたノードの中心Y座標
+ * @param draggedCenterX ドラッグされたノードの中心X座標
+ * @param targetNode ターゲットノード
+ * @param hasChildren ターゲットノードが子を持つかどうか
+ * @returns 挿入モード
+ */
+export const determineInsertMode = (
+  draggedCenterY: number,
+  draggedCenterX: number,
+  targetNode: NodeRect,
+  hasChildren: boolean,
+): InsertMode => {
+  // 子がないノードの右側検出
+  if (!hasChildren) {
+    const targetWidth = calculateNodeWidth(targetNode.label);
+    const rightBound = targetNode.x + targetWidth / 3;
+
+    // 右側2/3にドロップした場合は子挿入を優先
+    if (draggedCenterX > rightBound) {
+      return 'child';
+    }
+  }
+
+  // 縦方向のゾーン判定
+  const upperBound = targetNode.y + NODE_HEIGHT / 3;
+  const lowerBound = targetNode.y + (NODE_HEIGHT * 2) / 3;
+
+  if (draggedCenterY < upperBound) return 'before';
+  if (draggedCenterY > lowerBound) return 'after';
+  return 'child';
+};
+
+/**
  * ドロップ先を判定
  *
  * 最近接ノードを探し、閾値以内であればそのノードIDを返す。
@@ -87,18 +136,42 @@ export const findClosestNode = (
  * @param dragged ドラッグされたノード
  * @param candidates 候補ノード（自分自身は含めない前提）
  * @param threshold 閾値（px）デフォルト120px
+ * @param getHasChildren ノードIDから子の有無を判定する関数
  * @returns ドロップ先の情報（parentIdとinsertOrder）
  */
 export const determineDropTarget = (
   dragged: NodeRect,
   candidates: NodeRect[],
   threshold = 120,
+  getHasChildren?: (nodeId: string) => boolean,
 ): DropTarget => {
   const { nodeId, distance } = findClosestNode(dragged, candidates);
 
-  // 閾値以内であればnodeIdを返す、超えたらnull（ルート化）
-  const parentId = nodeId !== null && distance < threshold ? nodeId : null;
+  // 閾値を超える場合はルート化（末尾に追加）
+  if (nodeId === null || distance >= threshold) {
+    return { parentId: null };
+  }
 
-  // 現在はinsertOrderを返さず、末尾追加のままにする
-  return { parentId };
+  // 最近接ノードを取得
+  const targetNode = candidates.find((c) => c.id === nodeId);
+  if (!targetNode) {
+    return { parentId: null };
+  }
+
+  // ドラッグされたノードの中心座標を計算
+  const draggedWidth = calculateNodeWidth(dragged.label);
+  const draggedCenterX = dragged.x + draggedWidth / 2;
+  const draggedCenterY = dragged.y + NODE_HEIGHT / 2;
+
+  // ターゲットノードが子を持つかどうかを判定
+  const hasChildren = getHasChildren ? getHasChildren(nodeId) : false;
+
+  // ゾーン判定
+  const insertMode = determineInsertMode(draggedCenterY, draggedCenterX, targetNode, hasChildren);
+
+  return {
+    parentId: nodeId,
+    insertMode,
+    targetNodeId: nodeId,
+  };
 };
