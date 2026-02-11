@@ -14,6 +14,7 @@ import { Toaster } from 'react-hot-toast';
 import OutlinerPanel from './outliner/OutlinerPanel';
 import TreePanel from './visualization/TreePanel';
 import ShortcutBar from './shared/components/ShortcutBar/ShortcutBar';
+import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
 import './App.css';
 
 const DEFAULT_LEFT_PANEL_WIDTH = 350;
@@ -28,6 +29,9 @@ const STORAGE_KEY = 'leftPanelWidth';
  * この機能は軽量な実装で十分なため独自実装とした。
  */
 function App() {
+  // グローバルキーボードショートカット (Ctrl+Z / Ctrl+Shift+Z)
+  useGlobalShortcuts();
+
   // localStorageから初期値を取得、なければデフォルト値を使用
   const [leftPanelWidth, setLeftPanelWidth] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
