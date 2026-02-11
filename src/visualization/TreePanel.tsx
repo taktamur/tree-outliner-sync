@@ -93,7 +93,6 @@ const PreviewLine = ({ dragState, layoutNodes }: { dragState: DragState; layoutN
 /** ドラッグ中の状態を保持 */
 interface DragState {
   nodeId: string | null;
-  hoverTargetId: string | null;
   /** ドラッグ開始時の親ID（親ID比較用） */
   originalParentId: string | null | undefined;
   /** 挿入モード（プレビュー表示用） */
@@ -118,7 +117,6 @@ const TreePanel = () => {
   // ドラッグ中の状態を管理（プレビュー表示用）
   const [dragState, setDragState] = useState<DragState>({
     nodeId: null,
-    hoverTargetId: null,
     originalParentId: undefined,
   });
 
@@ -142,7 +140,7 @@ const TreePanel = () => {
   }, []);
 
   /**
-   * 表示用のエッジを計算（ドラッグ中はプレビュー表示）
+   * 表示用のエッジを計算（ドラッグ中は旧親との接続を隠す）
    */
   const displayEdges = useMemo<Edge[]>(() => {
     if (!dragState.nodeId) {
@@ -151,26 +149,9 @@ const TreePanel = () => {
     }
 
     // ドラッグ中のノードへのエッジを除外（旧親との接続を隠す）
-    const filteredEdges = layoutEdges.filter(
+    return layoutEdges.filter(
       (edge) => edge.target !== dragState.nodeId,
     );
-
-    // プレビューエッジを追加（hoverTargetIdがある場合のみ）
-    if (dragState.hoverTargetId) {
-      const previewEdge: Edge = {
-        id: `preview-${dragState.nodeId}-${dragState.hoverTargetId}`,
-        source: dragState.hoverTargetId,
-        target: dragState.nodeId,
-        style: { stroke: '#22c55e', strokeWidth: 2 },
-        animated: true,
-        type: 'smoothstep',
-        // @ts-expect-error strokeDasharray is not in Edge type but works
-        strokeDasharray: '5,5',
-      };
-      return [...filteredEdges, previewEdge];
-    }
-
-    return filteredEdges;
   }, [layoutEdges, dragState]);
 
   /**
@@ -199,7 +180,6 @@ const TreePanel = () => {
 
       setDragState({
         nodeId: node.id,
-        hoverTargetId: null,
         originalParentId,
       });
     },
@@ -225,7 +205,6 @@ const TreePanel = () => {
 
       setDragState({
         nodeId: draggedNode.id,
-        hoverTargetId: dropTarget.parentId,
         originalParentId: dragState.originalParentId,
         insertMode: dropTarget.insertMode,
         targetNodeId: dropTarget.targetNodeId,
@@ -303,7 +282,6 @@ const TreePanel = () => {
       // ドラッグ状態をリセット
       setDragState({
         nodeId: null,
-        hoverTargetId: null,
         originalParentId: undefined,
         insertMode: undefined,
         targetNodeId: undefined,
