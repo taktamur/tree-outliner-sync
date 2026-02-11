@@ -10,7 +10,7 @@
  */
 import { useCallback } from 'react';
 import { useTreeStore } from '../store/treeStore';
-import { getFlattenedOrder } from '../utils/treeOperations';
+import { getFlattenedOrder } from '../store/operations';
 
 /**
  * 指定ノードに対するキーボードイベントハンドラを生成

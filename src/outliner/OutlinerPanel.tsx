@@ -5,8 +5,8 @@
  * ルートノードのみを直接レンダリングし、子ノードはOutlinerItemが再帰的に表示する。
  */
 import { useState } from 'react';
-import { useTreeStore } from '../../store/treeStore';
-import { getChildren } from '../../utils/treeOperations';
+import { useTreeStore } from '../store/treeStore';
+import { getChildren } from '../store/operations';
 import OutlinerItem from './OutlinerItem';
 import './OutlinerPanel.css';
 

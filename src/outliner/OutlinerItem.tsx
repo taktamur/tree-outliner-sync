@@ -5,9 +5,9 @@
  * テキスト編集とキーボードショートカットをサポートし、子ノードを再帰的に表示する。
  */
 import { useEffect, useRef } from 'react';
-import { useTreeStore } from '../../store/treeStore';
-import { getChildren, getDepth } from '../../utils/treeOperations';
-import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
+import { useTreeStore } from '../store/treeStore';
+import { getChildren, getDepth } from '../store/operations';
+import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 import './OutlinerItem.css';
 
 /** OutlinerItemコンポーネントのProps */

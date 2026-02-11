@@ -6,19 +6,19 @@
  * 片方で変更すると自動的にもう片方にも反映される（双方向同期）。
  */
 import { create } from 'zustand';
-import type { TreeNode } from '../types/tree';
-import { generateId } from '../utils/idGenerator';
+import type { TreeNode } from './types';
+import { generateId } from '../shared/idGenerator';
 import {
   indentNode,
   outdentNode,
   addNodeAfter,
   deleteNode,
   moveNode,
-} from '../utils/treeOperations';
+} from './operations';
 import {
   parseScrapboxToTree,
   formatTreeToScrapbox,
-} from '../utils/scrapboxConverter';
+} from '../outliner/scrapboxConverter';
 
 /**
  * ツリーストアの型定義

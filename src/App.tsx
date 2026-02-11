@@ -10,9 +10,9 @@
  * - 下部: ShortcutBar（キーボードショートカット一覧）
  */
 import { useState, useEffect } from 'react';
-import OutlinerPanel from './components/OutlinerPanel/OutlinerPanel';
-import TreePanel from './components/TreePanel/TreePanel';
-import ShortcutBar from './components/ShortcutBar/ShortcutBar';
+import OutlinerPanel from './outliner/OutlinerPanel';
+import TreePanel from './visualization/TreePanel';
+import ShortcutBar from './shared/components/ShortcutBar/ShortcutBar';
 import './App.css';
 
 const DEFAULT_LEFT_PANEL_WIDTH = 350;

@@ -4,9 +4,9 @@
  * Scrapboxはインデントベースのアウトライナーで、階層構造をスペースまたはタブで表現する。
  * 1階層につき1文字のインデント（スペースまたはタブ）を使用する。
  */
-import type { TreeNode } from '../types/tree';
-import { generateId } from './idGenerator';
-import { getFlattenedOrder, getDepth } from './treeOperations';
+import type { TreeNode } from '../store/types';
+import { generateId } from '../shared/idGenerator';
+import { getFlattenedOrder, getDepth } from '../store/operations';
 
 /**
  * 使用されているインデント単位を検出
