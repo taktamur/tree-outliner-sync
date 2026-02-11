@@ -52,7 +52,7 @@ interface TreeStore {
   /** ノードを削除（子は一つ上の階層に昇格） */
   remove: (id: string) => void;
   /** ノードを別の親ノードの下に移動（D&D用） */
-  move: (nodeId: string, newParentId: string | null) => void;
+  move: (nodeId: string, newParentId: string | null, insertOrder?: number) => void;
 
   // undo/redo
   /** 操作を取り消す */
@@ -179,8 +179,8 @@ export const useTreeStore = create<TreeStore>()(
     }));
   },
 
-  move: (nodeId, newParentId) => {
-    const result = moveNode(get().nodes, nodeId, newParentId);
+  move: (nodeId, newParentId, insertOrder) => {
+    const result = moveNode(get().nodes, nodeId, newParentId, insertOrder);
     if (result) {
       set((state) => ({
         nodes: result,

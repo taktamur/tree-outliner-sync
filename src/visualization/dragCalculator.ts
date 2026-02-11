@@ -20,6 +20,14 @@ export interface ClosestNodeResult {
   distance: number;
 }
 
+/** ドロップ先の情報 */
+export interface DropTarget {
+  /** ドロップ先の親ノードID（nullの場合はルート化） */
+  parentId: string | null;
+  /** 挿入位置のorder値（undefinedの場合は末尾に追加） */
+  insertOrder?: number;
+}
+
 /**
  * 最近接ノードを検索
  *
@@ -79,15 +87,18 @@ export const findClosestNode = (
  * @param dragged ドラッグされたノード
  * @param candidates 候補ノード（自分自身は含めない前提）
  * @param threshold 閾値（px）デフォルト120px
- * @returns ドロップ先ノードID（ルート化の場合はnull）
+ * @returns ドロップ先の情報（parentIdとinsertOrder）
  */
 export const determineDropTarget = (
   dragged: NodeRect,
   candidates: NodeRect[],
   threshold = 120,
-): string | null => {
+): DropTarget => {
   const { nodeId, distance } = findClosestNode(dragged, candidates);
 
   // 閾値以内であればnodeIdを返す、超えたらnull（ルート化）
-  return nodeId !== null && distance < threshold ? nodeId : null;
+  const parentId = nodeId !== null && distance < threshold ? nodeId : null;
+
+  // 現在はinsertOrderを返さず、末尾追加のままにする
+  return { parentId };
 };
