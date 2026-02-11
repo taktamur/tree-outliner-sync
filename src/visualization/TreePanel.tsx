@@ -40,11 +40,11 @@ interface DragState {
  */
 const TreePanel = () => {
   const { setSelectedNodeId, move } = useTreeStore();
-  const layout = useTreeLayout();
+  const { nodes: layoutNodes, edges: layoutEdges, isLayouting } = useTreeLayout();
 
   // React Flow用のノードとエッジの状態管理
-  const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(layout.nodes);
-  const [, setFlowEdges, onEdgesChange] = useEdgesState(layout.edges);
+  const [flowNodes, setFlowNodes, onNodesChange] = useNodesState(layoutNodes);
+  const [, setFlowEdges, onEdgesChange] = useEdgesState(layoutEdges);
 
   // ドラッグ中の状態を管理（プレビュー表示用）
   const [dragState, setDragState] = useState<DragState>({
@@ -55,9 +55,9 @@ const TreePanel = () => {
 
   // レイアウトが変わったらReact Flowのノード・エッジを同期
   useMemo(() => {
-    setFlowNodes(layout.nodes);
-    setFlowEdges(layout.edges);
-  }, [layout.nodes, layout.edges, setFlowNodes, setFlowEdges]);
+    setFlowNodes(layoutNodes);
+    setFlowEdges(layoutEdges);
+  }, [layoutNodes, layoutEdges, setFlowNodes, setFlowEdges]);
 
   /**
    * React FlowのNodeをNodeRectに変換するヘルパー
@@ -78,11 +78,11 @@ const TreePanel = () => {
   const displayEdges = useMemo<Edge[]>(() => {
     if (!dragState.nodeId) {
       // ドラッグ中でなければ通常のエッジを表示
-      return layout.edges;
+      return layoutEdges;
     }
 
     // ドラッグ中のノードへのエッジを除外（旧親との接続を隠す）
-    const filteredEdges = layout.edges.filter(
+    const filteredEdges = layoutEdges.filter(
       (edge) => edge.target !== dragState.nodeId,
     );
 
@@ -102,7 +102,7 @@ const TreePanel = () => {
     }
 
     return filteredEdges;
-  }, [layout.edges, dragState]);
+  }, [layoutEdges, dragState]);
 
   /**
    * ノードクリック時の処理
@@ -147,7 +147,7 @@ const TreePanel = () => {
     (_event, draggedNode) => {
       // React FlowのNodeをNodeRectに変換
       const dragged = nodeToRect(draggedNode);
-      const candidates = layout.nodes
+      const candidates = layoutNodes
         .filter((n) => n.id !== draggedNode.id)
         .map(nodeToRect);
 
@@ -160,7 +160,7 @@ const TreePanel = () => {
         originalParentId: dragState.originalParentId,
       });
     },
-    [nodeToRect, layout.nodes, dragState.originalParentId],
+    [nodeToRect, layoutNodes, dragState.originalParentId],
   );
 
   /**
@@ -173,7 +173,7 @@ const TreePanel = () => {
     (_event, draggedNode) => {
       // React FlowのNodeをNodeRectに変換
       const dragged = nodeToRect(draggedNode);
-      const candidates = layout.nodes
+      const candidates = layoutNodes
         .filter((n) => n.id !== draggedNode.id)
         .map(nodeToRect);
 
@@ -191,13 +191,30 @@ const TreePanel = () => {
       // ドラッグ状態をリセット
       setDragState({ nodeId: null, hoverTargetId: null, originalParentId: undefined });
     },
-    [nodeToRect, layout.nodes, move, dragState.originalParentId],
+    [nodeToRect, layoutNodes, move, dragState.originalParentId],
   );
 
   return (
     <div className="tree-panel">
       <div className="tree-header">Tree Visualization</div>
       <div className="tree-content">
+        {isLayouting && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 1000,
+              background: 'rgba(255, 255, 255, 0.9)',
+              padding: '12px 24px',
+              borderRadius: '4px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            }}
+          >
+            Computing layout...
+          </div>
+        )}
         <ReactFlow
           nodes={flowNodes}
           edges={displayEdges}
