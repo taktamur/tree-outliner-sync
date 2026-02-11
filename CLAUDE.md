@@ -57,10 +57,10 @@ Claude Code からビルド・lint・テストコマンドを実行するには�
 
 ### GitHub Actions（Claude Code GitHub Action）
 
-GitHub Actions で動作する Claude Code に権限を付与するには、`.github/workflows/claude.yml` の `claude_args` に以下を設定:
+GitHub Actions で動作する Claude Code に権限を付与するには、`.github/workflows/claude.yml` の `claude_args` に `--allowedTools` を設定する。現在の設定:
 
 ```yaml
-claude_args: '--allowedPrompts Bash("npm *")'
+claude_args: '--allowedTools "Bash(npm install),Bash(npm run build),Bash(npm run lint),Bash(npm run test),Bash(npm run test:run)"'
 ```
 
 ### 対象コマンド
