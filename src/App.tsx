@@ -10,18 +10,18 @@
  * - 下部: ShortcutBar（キーボードショートカット一覧）
  * - オーバーレイ: DebugPanel（Ctrl+Shift+D で表示）
  */
-import { useState, useEffect } from 'react';
-import { Toaster } from 'react-hot-toast';
-import OutlinerPanel from './outliner/OutlinerPanel';
-import TreePanel from './visualization/TreePanel';
-import ShortcutBar from './shared/components/ShortcutBar/ShortcutBar';
-import DebugPanel from './shared/components/DebugPanel/DebugPanel';
-import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
-import './App.css';
+import { useState, useEffect } from "react";
+import { Toaster } from "react-hot-toast";
+import OutlinerPanel from "./outliner/OutlinerPanel";
+import TreePanel from "./visualization/TreePanel";
+import ShortcutBar from "./shared/components/ShortcutBar/ShortcutBar";
+import DebugPanel from "./shared/components/DebugPanel/DebugPanel";
+import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
+import "./App.css";
 
 const DEFAULT_LEFT_PANEL_WIDTH = 350;
 const MIN_LEFT_PANEL_WIDTH = 250;
-const STORAGE_KEY = 'leftPanelWidth';
+const STORAGE_KEY = "leftPanelWidth";
 
 /**
  * メインアプリケーション
@@ -51,14 +51,14 @@ function App() {
   // Ctrl+Shift+D でデバッグパネルをトグル
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+      if (e.ctrlKey && e.shiftKey && e.key === "D") {
         e.preventDefault();
         setIsDebugPanelVisible((prev) => !prev);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   /**
@@ -77,12 +77,12 @@ function App() {
     };
 
     const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
   };
 
   /**
@@ -100,19 +100,19 @@ function App() {
         toastOptions={{
           duration: 3000,
           style: {
-            background: '#333',
-            color: '#fff',
+            background: "#333",
+            color: "#fff",
           },
           success: {
             iconTheme: {
-              primary: '#4a90e2',
-              secondary: '#fff',
+              primary: "#4a90e2",
+              secondary: "#fff",
             },
           },
           error: {
             iconTheme: {
-              primary: '#e74c3c',
-              secondary: '#fff',
+              primary: "#e74c3c",
+              secondary: "#fff",
             },
           },
         }}

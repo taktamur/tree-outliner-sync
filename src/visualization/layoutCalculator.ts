@@ -130,6 +130,8 @@ const layoutSubtree = async (
       'elk.layered.spacing.nodeNodeBetweenLayers': '80',
       'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
       'elk.layered.nodePlacement.bk.fixedAlignment': 'LEFTUP',
+      'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+      'elk.layered.crossingMinimization.semiInteractive': 'true',
     },
     children: elkNodes,
     edges,
