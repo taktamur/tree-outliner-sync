@@ -7,8 +7,8 @@
  * 構成:
  * - 左パネル: OutlinerPanel（テキストベースの階層編集）
  * - 右パネル: TreePanel（ビジュアルツリー表示とD&D操作）
- * - 下部: ShortcutBar（キーボードショートカット一覧）
- * - オーバーレイ: DebugPanel（Ctrl+Shift+D で表示）
+ * - 下部: ShortcutBar（キーボードショートカット一覧とデバッグボタン）
+ * - オーバーレイ: DebugPanel
  */
 import { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
@@ -43,19 +43,6 @@ function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, String(leftPanelWidth));
   }, [leftPanelWidth]);
-
-  // Ctrl+Shift+D でデバッグパネルをトグル
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-        e.preventDefault();
-        setIsDebugPanelVisible((prev) => !prev);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   /**
    * マウスダウン時のハンドラ
@@ -128,9 +115,9 @@ function App() {
           <TreePanel />
         </div>
       </div>
-      {/* キーボードショートカット表示 */}
-      <ShortcutBar />
-      {/* デバッグパネル (Ctrl+Shift+D でトグル) */}
+      {/* キーボードショートカット表示とデバッグボタン */}
+      <ShortcutBar onDebugToggle={() => setIsDebugPanelVisible((prev) => !prev)} />
+      {/* デバッグパネル */}
       <DebugPanel
         isVisible={isDebugPanelVisible}
         onClose={() => setIsDebugPanelVisible(false)}

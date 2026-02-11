@@ -2,16 +2,22 @@
  * キーボードショートカット表示バー
  *
  * アプリケーション下部に表示される操作方法の参照UI。
- * アウトライナーとツリー可視化それぞれの操作方法を表示する。
+ * アウトライナーとツリー可視化それぞれの操作方法を表示し、
+ * デバッグパネルの開閉ボタンを提供する。
  */
 import './ShortcutBar.css';
+
+interface ShortcutBarProps {
+  /** デバッグパネルの開閉をトグルするコールバック */
+  onDebugToggle: () => void;
+}
 
 /**
  * ショートカット表示バー
  *
  * ユーザーが利用可能な操作を常時表示する。
  */
-const ShortcutBar = () => {
+const ShortcutBar = ({ onDebugToggle }: ShortcutBarProps) => {
   return (
     <div className="shortcut-bar">
       {/* アウトライナーの操作方法 */}
@@ -40,6 +46,13 @@ const ShortcutBar = () => {
         <span className="shortcut-item">クリック: 選択</span>
         <span className="shortcut-item">ドラッグ: 移動</span>
         <span className="shortcut-item">空白にドロップ: ルート化</span>
+      </div>
+      <div className="shortcut-divider" />
+      {/* デバッグパネル開閉ボタン */}
+      <div className="shortcut-section">
+        <button className="debug-toggle-btn" onClick={onDebugToggle}>
+          🐛 デバッグパネル
+        </button>
       </div>
     </div>
   );
