@@ -67,7 +67,7 @@ const layoutSubtree = (
 ): { nodes: LayoutNode[]; edges: LayoutEdge[]; height: number } => {
   // dagreグラフを初期化（LR方向: 左→右）
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: 'LR', nodesep: 20, ranksep: 80 });
+  g.setGraph({ rankdir: 'LR', nodesep: 20, ranksep: 80, align: 'UL' });
   g.setDefaultEdgeLabel(() => ({}));
 
   // サブツリーのノードを再帰的に収集
