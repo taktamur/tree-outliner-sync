@@ -198,8 +198,14 @@ const TreePanel = () => {
         .filter((n) => n.id !== draggedNode.id)
         .map(nodeToRect);
 
+      // 子の有無を判定する関数
+      const { nodes } = useTreeStore.getState();
+      const getHasChildren = (nodeId: string) => {
+        return nodes.some((n) => n.parentId === nodeId);
+      };
+
       // determineDropTargetを使ってドロップ先を判定
-      const dropTarget: DropTarget = determineDropTarget(dragged, candidates, 120);
+      const dropTarget: DropTarget = determineDropTarget(dragged, candidates, 120, getHasChildren);
 
       setDragState({
         nodeId: draggedNode.id,
@@ -228,8 +234,14 @@ const TreePanel = () => {
         .filter((n) => n.id !== draggedNode.id)
         .map(nodeToRect);
 
+      // 子の有無を判定する関数
+      const { nodes } = useTreeStore.getState();
+      const getHasChildren = (nodeId: string) => {
+        return nodes.some((n) => n.parentId === nodeId);
+      };
+
       // determineDropTargetを使ってドロップ先を判定
-      const dropTarget: DropTarget = determineDropTarget(dragged, candidates, 120);
+      const dropTarget: DropTarget = determineDropTarget(dragged, candidates, 120, getHasChildren);
 
       // insertModeがない場合（閾値超過でルート化）は、従来通りmove()を使用
       if (!dropTarget.insertMode || !dropTarget.targetNodeId) {
@@ -240,9 +252,6 @@ const TreePanel = () => {
           setFlowNodes(layoutNodes);
         }
       } else {
-        // insertModeに応じた移動処理（undo履歴を含む）
-        const { nodes } = useTreeStore.getState();
-
         // ターゲットノードを取得してルートノードかどうか判定
         const targetNode = nodes.find((n) => n.id === dropTarget.targetNodeId);
         const isTargetRoot = targetNode?.parentId === null;

@@ -86,21 +86,39 @@ export const findClosestNode = (
 };
 
 /**
- * ドロップゾーンを判定（ノードを縦3分割）
+ * ドロップゾーンを判定（ノードを縦3分割、子なしノードは右側検出も行う）
  *
  * ドラッグされたノードのY座標から、ターゲットノードのどのゾーンにドロップするかを判定する。
  * - 上側ゾーン（上1/3）: 兄弟として直前に挿入
  * - 中央ゾーン（中央1/3）: 子ノードとして先頭に挿入
  * - 下側ゾーン（下1/3）: 兄弟として直後に挿入
  *
+ * 子のないノードの場合、右側2/3にドロップすると中央ゾーン扱いにして子挿入を優先する。
+ *
  * @param draggedCenterY ドラッグされたノードの中心Y座標
+ * @param draggedCenterX ドラッグされたノードの中心X座標
  * @param targetNode ターゲットノード
+ * @param hasChildren ターゲットノードが子を持つかどうか
  * @returns 挿入モード
  */
 export const determineInsertMode = (
   draggedCenterY: number,
+  draggedCenterX: number,
   targetNode: NodeRect,
+  hasChildren: boolean,
 ): InsertMode => {
+  // 子がないノードの右側検出
+  if (!hasChildren) {
+    const targetWidth = calculateNodeWidth(targetNode.label);
+    const rightBound = targetNode.x + targetWidth / 3;
+
+    // 右側2/3にドロップした場合は子挿入を優先
+    if (draggedCenterX > rightBound) {
+      return 'child';
+    }
+  }
+
+  // 縦方向のゾーン判定
   const upperBound = targetNode.y + NODE_HEIGHT / 3;
   const lowerBound = targetNode.y + (NODE_HEIGHT * 2) / 3;
 
@@ -118,12 +136,14 @@ export const determineInsertMode = (
  * @param dragged ドラッグされたノード
  * @param candidates 候補ノード（自分自身は含めない前提）
  * @param threshold 閾値（px）デフォルト120px
+ * @param getHasChildren ノードIDから子の有無を判定する関数
  * @returns ドロップ先の情報（parentIdとinsertOrder）
  */
 export const determineDropTarget = (
   dragged: NodeRect,
   candidates: NodeRect[],
   threshold = 120,
+  getHasChildren?: (nodeId: string) => boolean,
 ): DropTarget => {
   const { nodeId, distance } = findClosestNode(dragged, candidates);
 
@@ -138,11 +158,16 @@ export const determineDropTarget = (
     return { parentId: null };
   }
 
-  // ドラッグされたノードの中心Y座標を計算
+  // ドラッグされたノードの中心座標を計算
+  const draggedWidth = calculateNodeWidth(dragged.label);
+  const draggedCenterX = dragged.x + draggedWidth / 2;
   const draggedCenterY = dragged.y + NODE_HEIGHT / 2;
 
+  // ターゲットノードが子を持つかどうかを判定
+  const hasChildren = getHasChildren ? getHasChildren(nodeId) : false;
+
   // ゾーン判定
-  const insertMode = determineInsertMode(draggedCenterY, targetNode);
+  const insertMode = determineInsertMode(draggedCenterY, draggedCenterX, targetNode, hasChildren);
 
   return {
     parentId: nodeId,
