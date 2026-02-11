@@ -100,24 +100,12 @@ const layoutSubtree = async (
     nodeWidths.set(n.id, width);
   });
 
-  // elkjs用のグラフ構造を構築
-  const buildElkNode = (nodeId: string): ElkNode => {
-    const node = subtreeNodes.find((n) => n.id === nodeId);
-    if (!node) throw new Error(`Node not found: ${nodeId}`);
-
-    const width = nodeWidths.get(nodeId) ?? BASE_NODE_WIDTH;
-    const children = getChildren(subtreeNodes, nodeId);
-
-    return {
-      id: nodeId,
-      width,
-      height: NODE_HEIGHT,
-      children: children.map((child) => buildElkNode(child.id)),
-    };
-  };
-
-  // ルートノードからelkグラフを構築
-  const rootNode = buildElkNode(rootId);
+  // elkjs用のフラットなノードリストを構築
+  const elkNodes: ElkNode[] = subtreeNodes.map((node) => ({
+    id: node.id,
+    width: nodeWidths.get(node.id) ?? BASE_NODE_WIDTH,
+    height: NODE_HEIGHT,
+  }));
 
   // エッジを収集
   const edges: ElkExtendedEdge[] = [];
@@ -143,7 +131,7 @@ const layoutSubtree = async (
       'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
       'elk.layered.nodePlacement.bk.fixedAlignment': 'LEFTUP',
     },
-    children: [rootNode],
+    children: elkNodes,
     edges,
   };
 
@@ -154,18 +142,13 @@ const layoutSubtree = async (
   let minY = Infinity;
   let maxY = -Infinity;
 
-  const extractNodes = (elkNode: ElkNode, offsetX = 0, offsetY = 0) => {
-    if (elkNode.id === 'root') {
-      // ルートコンテナはスキップ
-      elkNode.children?.forEach((child) => extractNodes(child, offsetX, offsetY));
-      return;
-    }
-
+  // ルートコンテナの子ノードを処理
+  layout.children?.forEach((elkNode) => {
     const treeNode = subtreeNodes.find((n) => n.id === elkNode.id);
     if (!treeNode) return;
 
-    const x = (elkNode.x ?? 0) + offsetX;
-    const y = (elkNode.y ?? 0) + offsetY + yOffset;
+    const x = elkNode.x ?? 0;
+    const y = (elkNode.y ?? 0) + yOffset;
 
     minY = Math.min(minY, y);
     maxY = Math.max(maxY, y + NODE_HEIGHT);
@@ -176,12 +159,7 @@ const layoutSubtree = async (
       data: { label: treeNode.text || '...' },
       type: 'custom',
     });
-
-    // 子ノードを再帰的に処理
-    elkNode.children?.forEach((child) => extractNodes(child, x, y));
-  };
-
-  extractNodes(layout);
+  });
 
   // React Flow用のエッジを作成
   const layoutEdges: LayoutEdge[] = edges.map((e) => ({
