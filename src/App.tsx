@@ -8,7 +8,7 @@
  * - 左パネル: OutlinerPanel（テキストベースの階層編集）
  * - 右パネル: TreePanel（ビジュアルツリー表示とD&D操作）
  * - 下部: ShortcutBar（キーボードショートカット一覧）
- * - オーバーレイ: DebugPanel（Ctrl+Shift+D で表示）
+ * - オーバーレイ: DebugPanel（右上のボタンで表示）
  */
 import { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
@@ -44,18 +44,6 @@ function App() {
     localStorage.setItem(STORAGE_KEY, String(leftPanelWidth));
   }, [leftPanelWidth]);
 
-  // Ctrl+Shift+D でデバッグパネルをトグル
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-        e.preventDefault();
-        setIsDebugPanelVisible((prev) => !prev);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   /**
    * マウスダウン時のハンドラ
@@ -113,6 +101,14 @@ function App() {
           },
         }}
       />
+      {/* デバッグパネルトグルボタン */}
+      <button
+        className="debug-toggle-button"
+        onClick={() => setIsDebugPanelVisible((prev) => !prev)}
+        title="デバッグパネルを開く/閉じる"
+      >
+        🐛
+      </button>
       <div className="app-main">
         {/* 左パネル: アウトライナー */}
         <div className="panel-left" style={{ width: `${leftPanelWidth}px` }}>
@@ -130,7 +126,7 @@ function App() {
       </div>
       {/* キーボードショートカット表示 */}
       <ShortcutBar />
-      {/* デバッグパネル (Ctrl+Shift+D でトグル) */}
+      {/* デバッグパネル */}
       <DebugPanel
         isVisible={isDebugPanelVisible}
         onClose={() => setIsDebugPanelVisible(false)}
