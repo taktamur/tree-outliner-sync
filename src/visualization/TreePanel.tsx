@@ -21,8 +21,6 @@ import { useTreeStore } from '../store/treeStore';
 import { useTreeLayout } from './useTreeLayout';
 import CustomNode from './CustomNode';
 import { determineDropTarget, type NodeRect, type DropTarget, type InsertMode } from './dragCalculator';
-import { moveNodeBefore, moveNodeAfter, moveNodeAsFirstChild } from '../store/operations';
-import type { TreeNode } from '../store/types';
 import './TreePanel.css';
 
 /** カスタムノードタイプの登録 */
@@ -107,7 +105,7 @@ interface DragState {
  * React Flowでツリーをレンダリングし、D&D操作を可能にする。
  */
 const TreePanel = () => {
-  const { setSelectedNodeId, move } = useTreeStore();
+  const { setSelectedNodeId, move, moveBefore, moveAfter, moveAsFirstChild } = useTreeStore();
   const { nodes: layoutNodes, edges: layoutEdges } = useTreeLayout();
 
   // React Flow用のノードとエッジの状態管理
@@ -242,9 +240,8 @@ const TreePanel = () => {
           setFlowNodes(layoutNodes);
         }
       } else {
-        // insertModeに応じた移動処理
-        const { nodes, setNodes } = useTreeStore.getState();
-        let result: TreeNode[] | null = null;
+        // insertModeに応じた移動処理（undo履歴を含む）
+        const { nodes } = useTreeStore.getState();
 
         // ターゲットノードを取得してルートノードかどうか判定
         const targetNode = nodes.find((n) => n.id === dropTarget.targetNodeId);
@@ -254,28 +251,20 @@ const TreePanel = () => {
         if (isTargetRoot) {
           if (dropTarget.insertMode === 'before') {
             // ルートノードの直前に挿入（ルート化）
-            result = moveNodeBefore(nodes, draggedNode.id, dropTarget.targetNodeId);
+            moveBefore(draggedNode.id, dropTarget.targetNodeId);
           } else if (dropTarget.insertMode === 'child' || dropTarget.insertMode === 'after') {
             // 中央ゾーンと下側ゾーンは直後に挿入（ルート化）
-            result = moveNodeAfter(nodes, draggedNode.id, dropTarget.targetNodeId);
+            moveAfter(draggedNode.id, dropTarget.targetNodeId);
           }
         } else {
           // 通常のノードの場合
           if (dropTarget.insertMode === 'before') {
-            result = moveNodeBefore(nodes, draggedNode.id, dropTarget.targetNodeId);
+            moveBefore(draggedNode.id, dropTarget.targetNodeId);
           } else if (dropTarget.insertMode === 'after') {
-            result = moveNodeAfter(nodes, draggedNode.id, dropTarget.targetNodeId);
+            moveAfter(draggedNode.id, dropTarget.targetNodeId);
           } else if (dropTarget.insertMode === 'child') {
-            result = moveNodeAsFirstChild(nodes, draggedNode.id, dropTarget.targetNodeId);
+            moveAsFirstChild(draggedNode.id, dropTarget.targetNodeId);
           }
-        }
-
-        // 移動が成功した場合のみストアを更新
-        if (result) {
-          setNodes(result);
-        } else {
-          // 移動失敗時は元のレイアウト位置に戻す
-          setFlowNodes(layoutNodes);
         }
       }
 
@@ -287,7 +276,7 @@ const TreePanel = () => {
         targetNodeId: undefined,
       });
     },
-    [nodeToRect, layoutNodes, move, dragState.originalParentId, setFlowNodes],
+    [nodeToRect, layoutNodes, move, moveBefore, moveAfter, moveAsFirstChild, dragState.originalParentId, setFlowNodes],
   );
 
   return (
