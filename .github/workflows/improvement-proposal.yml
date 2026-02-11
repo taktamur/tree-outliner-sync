@@ -1,0 +1,46 @@
+name: Daily Improvement Proposal
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # 毎日0時（UTC）に実行
+  workflow_dispatch: # 手動実行も可能
+
+jobs:
+  propose-improvement:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Check existing improvement proposals
+        id: check-existing
+        run: |
+          OPEN_PROPOSALS=$(gh issue list --label 改善提案 --state open --json number --jq '. | length')
+          echo "count=$OPEN_PROPOSALS" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Run Claude Code for improvement analysis
+        if: steps.check-existing.outputs.count == '0'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            .github/IMPROVEMENT_PROMPT.md の内容に従ってリポジトリを分析してください。
+
+            分析結果として改善提案がある場合は、以下のコマンドでissueを作成してください：
+
+            gh issue create \
+              --title "改善提案: [具体的なタイトル]" \
+              --body "[提案内容]" \
+              --label 改善提案
+
+            改善提案がない、または軽微な改善のみの場合はissueを作成せずに終了してください。
+          claude_args: "--allowed-tools Bash(gh issue create:*) Read"
