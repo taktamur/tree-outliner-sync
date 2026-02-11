@@ -1,10 +1,11 @@
 /**
  * ツリー可視化のレイアウト計算
  *
- * dagreライブラリを使用してツリー構造をLR（左→右）方向にレイアウトする。
+ * elkjsライブラリを使用してツリー構造をLR（左→右）方向にレイアウトする。
  * 複数のルートノードがある場合は、それぞれを個別にレイアウトして縦方向に積み重ねる。
  */
-import dagre from 'dagre';
+import type ELK from 'elkjs/lib/elk.bundled.js';
+import type { ElkNode, ElkExtendedEdge } from 'elkjs/lib/elk-api';
 import type { TreeNode } from '../store/types';
 import { getChildren } from '../store/operations';
 
@@ -52,24 +53,33 @@ export const calculateNodeWidth = (text: string): number => {
   return totalWidth;
 };
 
+/** elkインスタンスのキャッシュ */
+let elkInstance: ELK | null = null;
+
 /**
- * 単一のサブツリーをdagreでレイアウト計算
+ * elkインスタンスを取得（初回のみ動的import）
+ */
+const getElk = async (): Promise<ELK> => {
+  if (!elkInstance) {
+    const ELK = (await import('elkjs/lib/elk.bundled.js')).default;
+    elkInstance = new ELK();
+  }
+  return elkInstance;
+};
+
+/**
+ * 単一のサブツリーをelkjsでレイアウト計算
  *
  * @param allNodes 全ツリーノード
  * @param rootId サブツリーのルートノードID
  * @param yOffset このサブツリーの縦方向オフセット（複数ツリーを縦積みする際に使用）
  * @returns レイアウト済みノード、エッジ、およびサブツリーの高さ
  */
-const layoutSubtree = (
+const layoutSubtree = async (
   allNodes: TreeNode[],
   rootId: string,
   yOffset: number,
-): { nodes: LayoutNode[]; edges: LayoutEdge[]; height: number } => {
-  // dagreグラフを初期化（LR方向: 左→右）
-  const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: 'LR', nodesep: 20, ranksep: 80 });
-  g.setDefaultEdgeLabel(() => ({}));
-
+): Promise<{ nodes: LayoutNode[]; edges: LayoutEdge[]; height: number }> => {
   // サブツリーのノードを再帰的に収集
   const subtreeNodes: TreeNode[] = [];
   const collectNodes = (parentId: string) => {
@@ -87,46 +97,99 @@ const layoutSubtree = (
     nodeWidths.set(n.id, width);
   });
 
-  // dagreにノードを追加（テキストに基づく動的サイズ指定）
-  subtreeNodes.forEach((n) => {
-    const width = nodeWidths.get(n.id) ?? BASE_NODE_WIDTH;
-    g.setNode(n.id, { width, height: NODE_HEIGHT });
-  });
+  // elkjs用のグラフ構造を構築
+  const buildElkNode = (nodeId: string): ElkNode => {
+    const node = subtreeNodes.find((n) => n.id === nodeId);
+    if (!node) throw new Error(`Node not found: ${nodeId}`);
 
-  // dagreにエッジ（親子関係）を追加
-  const edges: LayoutEdge[] = [];
+    const width = nodeWidths.get(nodeId) ?? BASE_NODE_WIDTH;
+    const children = getChildren(subtreeNodes, nodeId);
+
+    return {
+      id: nodeId,
+      width,
+      height: NODE_HEIGHT,
+      children: children.map((child) => buildElkNode(child.id)),
+    };
+  };
+
+  // ルートノードからelkグラフを構築
+  const rootNode = buildElkNode(rootId);
+
+  // エッジを収集
+  const edges: ElkExtendedEdge[] = [];
   subtreeNodes.forEach((n) => {
     if (n.parentId && subtreeNodes.some((sn) => sn.id === n.parentId)) {
-      g.setEdge(n.parentId, n.id);
-      edges.push({ id: `e-${n.parentId}-${n.id}`, source: n.parentId, target: n.id });
+      edges.push({
+        id: `e-${n.parentId}-${n.id}`,
+        sources: [n.parentId],
+        targets: [n.id],
+      });
     }
   });
 
-  // dagreレイアウト計算を実行
-  dagre.layout(g);
+  // elkjsでレイアウト計算
+  const elk = await getElk();
+  const graph: ElkNode = {
+    id: 'root',
+    layoutOptions: {
+      'elk.algorithm': 'layered',
+      'elk.direction': 'RIGHT',
+      'elk.spacing.nodeNode': '20',
+      'elk.layered.spacing.nodeNodeBetweenLayers': '80',
+      'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+      'elk.layered.nodePlacement.bk.fixedAlignment': 'LEFTUP',
+    },
+    children: [rootNode],
+    edges,
+  };
 
-  // dagreの計算結果を取得し、yOffsetを適用してReact Flow形式に変換
+  const layout = await elk.layout(graph);
+
+  // elkjsの結果をReact Flow形式に変換
+  const layoutNodes: LayoutNode[] = [];
   let minY = Infinity;
   let maxY = -Infinity;
-  const layoutNodes: LayoutNode[] = subtreeNodes.map((n) => {
-    const dagreNode = g.node(n.id);
-    const nodeWidth = nodeWidths.get(n.id) ?? BASE_NODE_WIDTH;
-    const y = dagreNode.y + yOffset;
-    minY = Math.min(minY, y - NODE_HEIGHT / 2);
-    maxY = Math.max(maxY, y + NODE_HEIGHT / 2);
-    return {
-      id: n.id,
-      // dagreはノード中心座標を返すため、左上座標に変換
-      // 各ノードの実際の幅を使用
-      position: { x: dagreNode.x - nodeWidth / 2, y: y - NODE_HEIGHT / 2 },
-      data: { label: n.text || '...' },
+
+  const extractNodes = (elkNode: ElkNode, offsetX = 0, offsetY = 0) => {
+    if (elkNode.id === 'root') {
+      // ルートコンテナはスキップ
+      elkNode.children?.forEach((child) => extractNodes(child, offsetX, offsetY));
+      return;
+    }
+
+    const treeNode = subtreeNodes.find((n) => n.id === elkNode.id);
+    if (!treeNode) return;
+
+    const x = (elkNode.x ?? 0) + offsetX;
+    const y = (elkNode.y ?? 0) + offsetY + yOffset;
+
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y + NODE_HEIGHT);
+
+    layoutNodes.push({
+      id: elkNode.id,
+      position: { x, y },
+      data: { label: treeNode.text || '...' },
       type: 'custom',
-    };
-  });
+    });
+
+    // 子ノードを再帰的に処理
+    elkNode.children?.forEach((child) => extractNodes(child, x, y));
+  };
+
+  extractNodes(layout);
+
+  // React Flow用のエッジを作成
+  const layoutEdges: LayoutEdge[] = edges.map((e) => ({
+    id: e.id,
+    source: e.sources[0],
+    target: e.targets[0],
+  }));
 
   // サブツリーの高さを計算（次のツリーの配置に使用）
   const height = maxY - minY;
-  return { nodes: layoutNodes, edges, height };
+  return { nodes: layoutNodes, edges: layoutEdges, height };
 };
 
 /**
@@ -138,18 +201,18 @@ const layoutSubtree = (
  * @param nodes 全ツリーノード
  * @returns 全ノードとエッジのレイアウト結果
  */
-export const calculateLayout = (nodes: TreeNode[]): LayoutResult => {
+export const calculateLayout = async (nodes: TreeNode[]): Promise<LayoutResult> => {
   const roots = getChildren(nodes, null);
   const allLayoutNodes: LayoutNode[] = [];
   const allEdges: LayoutEdge[] = [];
 
   let yOffset = 0;
-  roots.forEach((root) => {
-    const { nodes: layoutNodes, edges, height } = layoutSubtree(nodes, root.id, yOffset);
+  for (const root of roots) {
+    const { nodes: layoutNodes, edges, height } = await layoutSubtree(nodes, root.id, yOffset);
     allLayoutNodes.push(...layoutNodes);
     allEdges.push(...edges);
     yOffset += height + TREE_GAP; // 次のツリーのために高さ+間隔を加算
-  });
+  }
 
   return { nodes: allLayoutNodes, edges: allEdges };
 };
