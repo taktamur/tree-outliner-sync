@@ -127,11 +127,18 @@ export const deleteNode = (nodes: TreeNode[], nodeId: string): TreeNode[] => {
 /**
  * ノード移動: あるノードを別のノードの子にする（D&D用）
  * 循環参照チェック付き
+ *
+ * @param nodes ツリーノードの配列
+ * @param nodeId 移動するノードのID
+ * @param newParentId 新しい親ノードのID（nullの場合はルート化）
+ * @param insertOrder 挿入位置のorder値（undefinedの場合は末尾に追加）
+ * @returns 更新後のノード配列（移動不可の場合はnull）
  */
 export const moveNode = (
   nodes: TreeNode[],
   nodeId: string,
   newParentId: string | null,
+  insertOrder?: number,
 ): TreeNode[] | null => {
   if (nodeId === newParentId) return null;
 
@@ -141,11 +148,14 @@ export const moveNode = (
     if (descendantIds.includes(newParentId)) return null;
   }
 
-  const newSiblings = getChildren(nodes, newParentId);
-  const maxOrder = newSiblings.length > 0 ? Math.max(...newSiblings.map((s) => s.order)) + 1 : 0;
+  // insertOrderが指定されていればそれを使用、なければ末尾に追加
+  const targetOrder = insertOrder ?? (() => {
+    const newSiblings = getChildren(nodes, newParentId);
+    return newSiblings.length > 0 ? Math.max(...newSiblings.map((s) => s.order)) + 1 : 0;
+  })();
 
   const updated = nodes.map((n) =>
-    n.id === nodeId ? { ...n, parentId: newParentId, order: maxOrder } : n,
+    n.id === nodeId ? { ...n, parentId: newParentId, order: targetOrder } : n,
   );
 
   return normalizeOrders(updated, newParentId);

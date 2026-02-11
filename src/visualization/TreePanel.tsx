@@ -19,7 +19,7 @@ import '@xyflow/react/dist/style.css';
 import { useTreeStore } from '../store/treeStore';
 import { useTreeLayout } from './useTreeLayout';
 import CustomNode from './CustomNode';
-import { determineDropTarget, type NodeRect } from './dragCalculator';
+import { determineDropTarget, type NodeRect, type DropTarget } from './dragCalculator';
 import './TreePanel.css';
 
 /** カスタムノードタイプの登録 */
@@ -29,7 +29,7 @@ const nodeTypes = { custom: CustomNode };
 interface DragState {
   nodeId: string | null;
   hoverTargetId: string | null;
-  /** ドラッグ開始時の親ID（案2: 親ID比較用） */
+  /** ドラッグ開始時の親ID（親ID比較用） */
   originalParentId: string | null | undefined;
 }
 
@@ -152,11 +152,11 @@ const TreePanel = () => {
         .map(nodeToRect);
 
       // determineDropTargetを使ってドロップ先を判定
-      const hoverTargetId = determineDropTarget(dragged, candidates, 120);
+      const dropTarget: DropTarget = determineDropTarget(dragged, candidates, 120);
 
       setDragState({
         nodeId: draggedNode.id,
-        hoverTargetId,
+        hoverTargetId: dropTarget.parentId,
         originalParentId: dragState.originalParentId,
       });
     },
@@ -164,7 +164,7 @@ const TreePanel = () => {
   );
 
   /**
-   * ノードドラッグ終了時の処理（案2: 親ID比較方式）
+   * ノードドラッグ終了時の処理（親ID比較方式）
    *
    * ドロップ位置から新しい親を判定し、ドラッグ開始時の親と異なる場合のみ移動する。
    * これにより、「レイアウト調整のためのドラッグ」と「親子関係変更のためのドラッグ」を区別できる。
@@ -179,14 +179,14 @@ const TreePanel = () => {
         .map(nodeToRect);
 
       // determineDropTargetを使ってドロップ先を判定
-      const newParentId = determineDropTarget(dragged, candidates, 120);
+      const dropTarget: DropTarget = determineDropTarget(dragged, candidates, 120);
 
       // ドラッグ開始時の親IDと比較（undefined チェック）
       const originalParentId = dragState.originalParentId ?? null;
 
       // 親が実際に変わった場合のみ move() を実行
-      if (newParentId !== originalParentId) {
-        move(draggedNode.id, newParentId);
+      if (dropTarget.parentId !== originalParentId) {
+        move(draggedNode.id, dropTarget.parentId, dropTarget.insertOrder);
       } else {
         // 親が変わらない場合は、元のレイアウト位置に戻す
         setFlowNodes(layoutNodes);
