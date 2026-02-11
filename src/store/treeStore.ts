@@ -6,6 +6,7 @@
  * 片方で変更すると自動的にもう片方にも反映される（双方向同期）。
  */
 import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
 import type { TreeNode } from './types';
 import { generateId } from '../shared/idGenerator';
 import {
@@ -19,6 +20,7 @@ import {
   parseScrapboxToTree,
   formatTreeToScrapbox,
 } from '../outliner/scrapboxConverter';
+import { saveTreeState, loadTreeState, clearTreeState } from '../utils/storage';
 
 /**
  * ツリーストアの型定義
@@ -85,13 +87,27 @@ const createSampleData = (): TreeNode[] => {
 };
 
 /**
+ * 初期データを取得
+ * localStorageに保存されたデータがあればそれを使用し、なければサンプルデータを使用する。
+ * @returns ツリーノードの配列
+ */
+const getInitialData = (): TreeNode[] => {
+  const saved = loadTreeState();
+  if (saved && saved.length > 0) {
+    return saved;
+  }
+  return createSampleData();
+};
+
+/**
  * Zustandストアのインスタンスを作成
  *
  * 状態更新はすべてイミュータブルに行われ、Reactの再レンダリングが自動的にトリガーされる。
  */
-export const useTreeStore = create<TreeStore>((set, get) => ({
-  nodes: createSampleData(),
-  selectedNodeId: null,
+export const useTreeStore = create<TreeStore>()(
+  subscribeWithSelector((set, get) => ({
+    nodes: getInitialData(),
+    selectedNodeId: null,
 
   updateNodeText: (id, text) => {
     set((state) => ({
@@ -141,10 +157,24 @@ export const useTreeStore = create<TreeStore>((set, get) => ({
       }
     }
     const nodes = parseScrapboxToTree(text);
+    // Scrapboxインポート時はlocalStorageをクリア
+    clearTreeState();
     set({ nodes, selectedNodeId: null });
   },
 
   exportToScrapbox: () => {
     return formatTreeToScrapbox(get().nodes);
   },
-}));
+})));
+
+// ツリーノードの変更を監視して自動保存
+useTreeStore.subscribe(
+  (state) => state.nodes,
+  (nodes) => {
+    saveTreeState(nodes);
+  },
+  {
+    // ノード配列が実際に変更された場合のみ保存
+    equalityFn: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+  }
+);
