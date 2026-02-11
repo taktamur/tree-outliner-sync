@@ -8,12 +8,14 @@
  * - 左パネル: OutlinerPanel（テキストベースの階層編集）
  * - 右パネル: TreePanel（ビジュアルツリー表示とD&D操作）
  * - 下部: ShortcutBar（キーボードショートカット一覧）
+ * - オーバーレイ: DebugPanel（Ctrl+Shift+D で表示）
  */
 import { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import OutlinerPanel from './outliner/OutlinerPanel';
 import TreePanel from './visualization/TreePanel';
 import ShortcutBar from './shared/components/ShortcutBar/ShortcutBar';
+import DebugPanel from './shared/components/DebugPanel/DebugPanel';
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
 import './App.css';
 
@@ -38,10 +40,26 @@ function App() {
     return saved ? Number(saved) : DEFAULT_LEFT_PANEL_WIDTH;
   });
 
+  // デバッグパネルの表示/非表示
+  const [isDebugPanelVisible, setIsDebugPanelVisible] = useState(false);
+
   // 幅の変更をlocalStorageに保存
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, String(leftPanelWidth));
   }, [leftPanelWidth]);
+
+  // Ctrl+Shift+D でデバッグパネルをトグル
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        setIsDebugPanelVisible((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   /**
    * マウスダウン時のハンドラ
@@ -116,6 +134,11 @@ function App() {
       </div>
       {/* キーボードショートカット表示 */}
       <ShortcutBar />
+      {/* デバッグパネル (Ctrl+Shift+D でトグル) */}
+      <DebugPanel
+        isVisible={isDebugPanelVisible}
+        onClose={() => setIsDebugPanelVisible(false)}
+      />
     </div>
   );
 }
