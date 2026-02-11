@@ -1,0 +1,93 @@
+/**
+ * ドラッグ&ドロップ時のノード選択ロジック
+ *
+ * TreePanel.tsxから分離した純粋関数群。
+ * テスト可能な形で最近接ノード検索とドロップ先判定を提供する。
+ */
+import { calculateNodeWidth, NODE_HEIGHT } from './layoutCalculator';
+
+/** ノードの矩形情報（React Flowのノードから抽出） */
+export interface NodeRect {
+  id: string;
+  x: number;      // position.x
+  y: number;      // position.y
+  label: string;  // data.label
+}
+
+/** 最近接ノード検索の結果 */
+export interface ClosestNodeResult {
+  nodeId: string | null;
+  distance: number;
+}
+
+/**
+ * 最近接ノードを検索
+ *
+ * ドラッグされたノードから最も近いノードを探す。
+ * 各ノードの中心座標を計算し、ユークリッド距離で判定する。
+ *
+ * @param dragged ドラッグされたノード
+ * @param candidates 候補ノード（自分自身は含めない前提）
+ * @returns 最近接ノードのIDと距離（候補がない場合はnull）
+ */
+export const findClosestNode = (
+  dragged: NodeRect,
+  candidates: NodeRect[],
+): ClosestNodeResult => {
+  if (candidates.length === 0) {
+    return { nodeId: null, distance: Infinity };
+  }
+
+  // ドラッグされたノードの中心座標を計算
+  const draggedWidth = calculateNodeWidth(dragged.label);
+  const draggedCenter = {
+    x: dragged.x + draggedWidth / 2,
+    y: dragged.y + NODE_HEIGHT / 2,
+  };
+
+  let closestNodeId: string | null = null;
+  let closestDistance = Infinity;
+
+  // 各候補ノードとの距離を計算
+  for (const candidate of candidates) {
+    const candidateWidth = calculateNodeWidth(candidate.label);
+    const candidateCenter = {
+      x: candidate.x + candidateWidth / 2,
+      y: candidate.y + NODE_HEIGHT / 2,
+    };
+
+    const distance = Math.sqrt(
+      (draggedCenter.x - candidateCenter.x) ** 2 +
+      (draggedCenter.y - candidateCenter.y) ** 2,
+    );
+
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestNodeId = candidate.id;
+    }
+  }
+
+  return { nodeId: closestNodeId, distance: closestDistance };
+};
+
+/**
+ * ドロップ先を判定
+ *
+ * 最近接ノードを探し、閾値以内であればそのノードIDを返す。
+ * 閾値を超える場合はnull（ルート化）を返す。
+ *
+ * @param dragged ドラッグされたノード
+ * @param candidates 候補ノード（自分自身は含めない前提）
+ * @param threshold 閾値（px）デフォルト120px
+ * @returns ドロップ先ノードID（ルート化の場合はnull）
+ */
+export const determineDropTarget = (
+  dragged: NodeRect,
+  candidates: NodeRect[],
+  threshold = 120,
+): string | null => {
+  const { nodeId, distance } = findClosestNode(dragged, candidates);
+
+  // 閾値以内であればnodeIdを返す、超えたらnull（ルート化）
+  return nodeId !== null && distance < threshold ? nodeId : null;
+};
