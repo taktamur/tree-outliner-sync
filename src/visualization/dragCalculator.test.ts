@@ -95,7 +95,7 @@ describe('dragCalculator', () => {
 
       const result = determineDropTarget(dragged, candidates, 120);
 
-      expect(result).toBe('node1');
+      expect(result).toEqual({ parentId: 'node1' });
     });
 
     it('should return null when exceeding threshold', () => {
@@ -112,7 +112,7 @@ describe('dragCalculator', () => {
 
       const result = determineDropTarget(dragged, candidates, 120);
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ parentId: null });
     });
 
     it('should use default threshold of 120px', () => {
@@ -130,7 +130,7 @@ describe('dragCalculator', () => {
       // 閾値を指定しない（デフォルト120px）
       const result = determineDropTarget(dragged, candidates);
 
-      expect(result).toBe('node1');
+      expect(result).toEqual({ parentId: 'node1' });
     });
 
     it('should handle boundary case (exactly at threshold)', () => {
@@ -150,11 +150,11 @@ describe('dragCalculator', () => {
 
       // 距離119px、閾値120pxの場合 → 範囲内
       const result1 = determineDropTarget(dragged, candidates, 120);
-      expect(result1).toBe('node1');
+      expect(result1).toEqual({ parentId: 'node1' });
 
       // 距離119px、閾値119pxの場合 → 範囲外（distance < threshold なので）
       const result2 = determineDropTarget(dragged, candidates, 119);
-      expect(result2).toBeNull();
+      expect(result2).toEqual({ parentId: null });
     });
 
     it('should return null when candidates are empty', () => {
@@ -167,7 +167,7 @@ describe('dragCalculator', () => {
 
       const result = determineDropTarget(dragged, []);
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ parentId: null });
     });
 
     it('should handle custom threshold values', () => {
@@ -183,10 +183,10 @@ describe('dragCalculator', () => {
       ];
 
       // 閾値30pxの場合は範囲外
-      expect(determineDropTarget(dragged, candidates, 30)).toBeNull();
+      expect(determineDropTarget(dragged, candidates, 30)).toEqual({ parentId: null });
 
       // 閾値100pxの場合は範囲内
-      expect(determineDropTarget(dragged, candidates, 100)).toBe('node1');
+      expect(determineDropTarget(dragged, candidates, 100)).toEqual({ parentId: 'node1' });
     });
   });
 });
