@@ -27,6 +27,48 @@ npm run lint     # ESLint
 
 - `--force` / `-f` を伴う git 操作は禁止（`push --force`、`push --force-with-lease`、`reset --hard` など）
 
+## パッケージ管理ルール
+
+- 新しいパッケージを追加する際は `npm install <package>` を使用すること
+- 手動でpackage.jsonを編集した場合は必ず `npm install` を実行してpackage-lock.jsonを更新すること
+- PRにはpackage.jsonとpackage-lock.jsonの両方を含めること
+- package.jsonとpackage-lock.jsonの不一致はCIビルド失敗の原因となるため注意
+
+## Claude Code 実行権限設定
+
+Claude Code からビルド・lint・テストコマンドを実行するには、以下の権限設定が必要です:
+
+### 設定方法
+
+Claude Code の `allowedPrompts` に以下を追加:
+
+```json
+{
+  "allowedPrompts": [
+    {
+      "tool": "Bash",
+      "prompt": "run tests"
+    },
+    {
+      "tool": "Bash",
+      "prompt": "run build"
+    },
+    {
+      "tool": "Bash",
+      "prompt": "run lint"
+    }
+  ]
+}
+```
+
+### 対象コマンド
+
+- `npm run build`: TypeScriptコンパイル + Viteビルド
+- `npm run lint`: ESLint実行
+- `npm run test`: ユニットテスト実行（設定されている場合）
+
+権限が設定されていない場合、Claude は上記コマンドの実行をスキップし、PR作成時に手動確認を促すメッセージを表示します。
+
 ## アーキテクチャ上の注意点
 
 ### データモデル
