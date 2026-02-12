@@ -100,3 +100,5 @@ claude_args: '--allowedTools "Bash(npm *)"'
 
 - `onNodeDragStop` で最近接ノードを検出（120px 閾値）
 - 循環参照チェック: `getDescendantIds` で子孫を取得し、移動先が子孫でないことを確認
+
+<!-- 動作確認用コメント: git操作の自動実行テスト (issue #94 関連) -->
