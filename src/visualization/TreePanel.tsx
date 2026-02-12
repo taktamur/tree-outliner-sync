@@ -20,7 +20,7 @@ import '@xyflow/react/dist/style.css';
 import { useTreeStore } from '../store/treeStore';
 import { useTreeLayout } from './useTreeLayout';
 import CustomNode from './CustomNode';
-import { determineDropTarget, type NodeRect, type DropTarget, type InsertMode } from './dragCalculator';
+import { determineDropTargetV2, type NodeRect, type DropTarget, type InsertMode } from './dragCalculator';
 import './TreePanel.css';
 
 /** カスタムノードタイプの登録 */
@@ -198,14 +198,8 @@ const TreePanel = () => {
         .filter((n) => n.id !== draggedNode.id)
         .map(nodeToRect);
 
-      // 子の有無を判定する関数
-      const { nodes } = useTreeStore.getState();
-      const getHasChildren = (nodeId: string) => {
-        return nodes.some((n) => n.parentId === nodeId);
-      };
-
-      // determineDropTargetを使ってドロップ先を判定
-      const dropTarget: DropTarget = determineDropTarget(dragged, candidates, 120, getHasChildren);
+      // determineDropTargetV2を使ってドロップ先を判定（左側ノード吸着方式）
+      const dropTarget: DropTarget = determineDropTargetV2(dragged, candidates);
 
       setDragState({
         nodeId: draggedNode.id,
@@ -234,14 +228,8 @@ const TreePanel = () => {
         .filter((n) => n.id !== draggedNode.id)
         .map(nodeToRect);
 
-      // 子の有無を判定する関数
-      const { nodes } = useTreeStore.getState();
-      const getHasChildren = (nodeId: string) => {
-        return nodes.some((n) => n.parentId === nodeId);
-      };
-
-      // determineDropTargetを使ってドロップ先を判定
-      const dropTarget: DropTarget = determineDropTarget(dragged, candidates, 120, getHasChildren);
+      // determineDropTargetV2を使ってドロップ先を判定（左側ノード吸着方式）
+      const dropTarget: DropTarget = determineDropTargetV2(dragged, candidates);
 
       // insertModeがない場合（閾値超過でルート化）は、従来通りmove()を使用
       if (!dropTarget.insertMode || !dropTarget.targetNodeId) {
@@ -253,6 +241,7 @@ const TreePanel = () => {
         }
       } else {
         // ターゲットノードを取得してルートノードかどうか判定
+        const { nodes } = useTreeStore.getState();
         const targetNode = nodes.find((n) => n.id === dropTarget.targetNodeId);
         const isTargetRoot = targetNode?.parentId === null;
 

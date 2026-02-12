@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { findClosestNode, determineDropTarget, determineInsertMode, type NodeRect } from './dragCalculator';
+import {
+  findClosestNode,
+  determineDropTarget,
+  determineInsertMode,
+  determineDropTargetV2,
+  determineInsertModeV2,
+  type NodeRect
+} from './dragCalculator';
 
 describe('dragCalculator', () => {
   describe('findClosestNode', () => {
@@ -80,7 +87,7 @@ describe('dragCalculator', () => {
     });
   });
 
-  describe('determineInsertMode', () => {
+  describe('determineInsertMode (旧アルゴリズム)', () => {
     it('should return "before" when dragged to upper zone (top 1/3)', () => {
       const targetNode: NodeRect = { id: 'target', x: 100, y: 100, label: 'Target' };
 
@@ -152,7 +159,7 @@ describe('dragCalculator', () => {
     });
   });
 
-  describe('determineDropTarget', () => {
+  describe('determineDropTarget (旧アルゴリズム)', () => {
     it('should return nodeId with insertMode when within threshold', () => {
       const dragged: NodeRect = {
         id: 'dragged',
@@ -317,6 +324,181 @@ describe('dragCalculator', () => {
       // 子がいる場合は右側でも通常の縦ゾーン判定
       const result = determineDropTarget(dragged, candidates, 120, getHasChildren);
       expect(result.insertMode).toBe('child'); // Y座標が中央ゾーン
+    });
+  });
+
+  describe('determineInsertModeV2 (新アルゴリズム)', () => {
+    it('should return "child" for left target', () => {
+      const targetNode: NodeRect = { id: 'target', x: 100, y: 100, label: 'Target' };
+
+      // 左側ターゲットは常にchild
+      expect(determineInsertModeV2(105, targetNode, true)).toBe('child');
+      expect(determineInsertModeV2(120, targetNode, true)).toBe('child');
+      expect(determineInsertModeV2(135, targetNode, true)).toBe('child');
+    });
+
+    it('should return "before" when dragged above same-column target center', () => {
+      const targetNode: NodeRect = { id: 'target', x: 100, y: 100, label: 'Target' };
+
+      // ターゲット中心Y: 100 + 20 = 120
+      // ドラッグ中心Y < 120 なら before
+      expect(determineInsertModeV2(115, targetNode, false)).toBe('before');
+      expect(determineInsertModeV2(119, targetNode, false)).toBe('before');
+    });
+
+    it('should return "after" when dragged below same-column target center', () => {
+      const targetNode: NodeRect = { id: 'target', x: 100, y: 100, label: 'Target' };
+
+      // ターゲット中心Y: 100 + 20 = 120
+      // ドラッグ中心Y >= 120 なら after
+      expect(determineInsertModeV2(120, targetNode, false)).toBe('after');
+      expect(determineInsertModeV2(125, targetNode, false)).toBe('after');
+    });
+  });
+
+  describe('determineDropTargetV2 (新アルゴリズム)', () => {
+    it('should return null when candidates are empty', () => {
+      const dragged: NodeRect = {
+        id: 'dragged',
+        x: 100,
+        y: 100,
+        label: 'Dragged',
+      };
+
+      const result = determineDropTargetV2(dragged, []);
+
+      expect(result).toEqual({ parentId: null });
+    });
+
+    it('should select left node with minimum |ΔY|', () => {
+      // ドラッグ: 幅80px、左端100、中心Y: 120
+      const dragged: NodeRect = {
+        id: 'dragged',
+        x: 100,
+        y: 100,
+        label: 'Dragged',
+      };
+
+      // 左側ノード（右端 < 100）
+      const candidates: NodeRect[] = [
+        { id: 'left1', x: 0, y: 100, label: 'L1' },   // 右端80、中心Y: 120、ΔY=0
+        { id: 'left2', x: 0, y: 150, label: 'L2' },   // 右端80、中心Y: 170、ΔY=50
+      ];
+
+      const result = determineDropTargetV2(dragged, candidates);
+
+      expect(result.targetNodeId).toBe('left1');
+      expect(result.insertMode).toBe('child'); // 左側ノードは常にchild
+    });
+
+    it('should prefer left node over same-column node', () => {
+      // ドラッグ: 幅80px、左端100、中心Y: 120
+      const dragged: NodeRect = {
+        id: 'dragged',
+        x: 100,
+        y: 100,
+        label: 'Dragged',
+      };
+
+      const candidates: NodeRect[] = [
+        { id: 'left', x: 0, y: 150, label: 'Left' },    // 右端80、中心Y: 170、ΔY=50
+        { id: 'same', x: 100, y: 100, label: 'Same' },  // X範囲重なる、中心Y: 120、ΔY=0
+      ];
+
+      const result = determineDropTargetV2(dragged, candidates);
+
+      // 左側ノード優先（ΔYが大きくても）
+      expect(result.targetNodeId).toBe('left');
+      expect(result.insertMode).toBe('child');
+    });
+
+    it('should select same-column node when no left nodes exist', () => {
+      // ドラッグ: 幅80px、左端100、中心Y: 120
+      const dragged: NodeRect = {
+        id: 'dragged',
+        x: 100,
+        y: 100,
+        label: 'Dragged',
+      };
+
+      const candidates: NodeRect[] = [
+        { id: 'same1', x: 100, y: 100, label: 'S1' },  // X範囲重なる、中心Y: 120、ΔY=0
+        { id: 'same2', x: 150, y: 150, label: 'S2' },  // X範囲重なる、中心Y: 170、ΔY=50
+      ];
+
+      const result = determineDropTargetV2(dragged, candidates);
+
+      expect(result.targetNodeId).toBe('same1');
+      expect(result.insertMode).toBe('after'); // 同列ノード、中心Y同じなので after
+    });
+
+    it('should use before/after for same-column node based on Y position', () => {
+      // ドラッグ: 幅80px、左端100、中心Y: 120
+      const dragged: NodeRect = {
+        id: 'dragged',
+        x: 100,
+        y: 100,
+        label: 'Dragged',
+      };
+
+      // 同列ノード
+      const candidates1: NodeRect[] = [
+        { id: 'above', x: 100, y: 50, label: 'Above' },  // 中心Y: 70、ドラッグ中心Y(120) > ターゲット中心Y(70) → after
+      ];
+
+      const result1 = determineDropTargetV2(dragged, candidates1);
+      expect(result1.targetNodeId).toBe('above');
+      expect(result1.insertMode).toBe('after');
+
+      const candidates2: NodeRect[] = [
+        { id: 'below', x: 100, y: 150, label: 'Below' },  // 中心Y: 170、ドラッグ中心Y(120) < ターゲット中心Y(170) → before
+      ];
+
+      const result2 = determineDropTargetV2(dragged, candidates2);
+      expect(result2.targetNodeId).toBe('below');
+      expect(result2.insertMode).toBe('before');
+    });
+
+    it('should break tie by |ΔX| when |ΔY| is equal', () => {
+      // ドラッグ: 幅80px、左端100、中心Y: 120
+      const dragged: NodeRect = {
+        id: 'dragged',
+        x: 100,
+        y: 100,
+        label: 'Dragged',
+      };
+
+      const candidates: NodeRect[] = [
+        { id: 'left1', x: 0, y: 100, label: 'L1' },     // 右端80、ΔY=0、ΔX=100
+        { id: 'left2', x: 50, y: 100, label: 'L2' },    // 右端130（幅80）、ΔY=0、ΔX=50（より近い）
+      ];
+
+      const result = determineDropTargetV2(dragged, candidates);
+
+      // left2は右端130 > dragged左端100なので同列ノード扱い
+      // left1のみが左側ノードなので、left1が選ばれる
+      expect(result.targetNodeId).toBe('left1');
+      expect(result.insertMode).toBe('child');
+    });
+
+    it('should handle no-overlap case correctly', () => {
+      // ドラッグ: 幅80px、左端100、中心Y: 120
+      const dragged: NodeRect = {
+        id: 'dragged',
+        x: 100,
+        y: 100,
+        label: 'D', // 幅80
+      };
+
+      // 候補: 右端20 < 100 なので左側ノード
+      const candidates: NodeRect[] = [
+        { id: 'far-left', x: -60, y: 100, label: 'F' }, // 左端-60、幅80、右端20
+      ];
+
+      const result = determineDropTargetV2(dragged, candidates);
+
+      expect(result.targetNodeId).toBe('far-left');
+      expect(result.insertMode).toBe('child'); // 左側ノードは常にchild
     });
   });
 });
