@@ -30,6 +30,7 @@ npm run test:run # ユニットテスト（1回実行）
 - `--force` / `-f` を伴う git 操作は禁止（`push --force`、`push --force-with-lease`、`reset --hard` など）
 - Bashでgitコマンドを実行する際は、`&&` で複数コマンドを繋げず、1コマンドずつ個別に実行すること（例: `git add .` と `git commit -m "..."` は別々のBash呼び出しで実行）
 - `git commit -m` のメッセージに `$()` やヒアドキュメント（`<<EOF`）を使わず、直接文字列で指定すること
+- `git commit -m` のメッセージは改行を含めず1行で書くこと（複数行のコミットメッセージは使わない）
 
 ## パッケージ管理ルール
 
