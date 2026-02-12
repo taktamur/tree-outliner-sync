@@ -27,10 +27,22 @@ npm run test:run # ユニットテスト（1回実行）
 
 ## Git ルール
 
+### ⚠️ 重要: コミットメッセージのルール
+
+**`git commit -m` のメッセージは必ず1行で書くこと。改行（`\n`）は絶対に使用禁止。**
+
+- ❌ 悪い例: `git commit -m "タイトル\n\n本文"`
+- ❌ 悪い例: `git commit -m "$(cat <<'EOF'\n...\nEOF\n)"`
+- ✅ 良い例: `git commit -m "fix: バグを修正"`
+- ✅ 良い例: `git commit -m "feat: 新機能を追加 Co-authored-by: User <email>"`
+
+Co-authored-by を含める場合も、すべて1行で記述すること。
+
+### その他のGitルール
+
 - `--force` / `-f` を伴う git 操作は禁止（`push --force`、`push --force-with-lease`、`reset --hard` など）
 - Bashでgitコマンドを実行する際は、`&&` で複数コマンドを繋げず、1コマンドずつ個別に実行すること（例: `git add .` と `git commit -m "..."` は別々のBash呼び出しで実行）
 - `git commit -m` のメッセージに `$()` やヒアドキュメント（`<<EOF`）を使わず、直接文字列で指定すること
-- `git commit -m` のメッセージは改行を含めず1行で書くこと（複数行のコミットメッセージは使わない）
 
 ## パッケージ管理ルール
 
