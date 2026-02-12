@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { TreeNode } from '../store/types';
+import { ROOT_NODE_ID } from '../store/types';
 import { calculateLayout } from './layoutCalculator';
 
 describe('layoutCalculator', () => {
@@ -7,7 +8,8 @@ describe('layoutCalculator', () => {
     // 単一ルートノードのツリーに対してレイアウトを計算するテスト
     it('should calculate layout for single root tree', async () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child1', text: 'Child 1', parentId: 'root', order: 0 },
         { id: 'child2', text: 'Child 2', parentId: 'root', order: 1 },
       ];
@@ -35,9 +37,10 @@ describe('layoutCalculator', () => {
     // 複数ルートノードのツリーに対してレイアウトを計算し、縦方向に配置されることを確認
     it('should calculate layout for multiple root trees', async () => {
       const nodes: TreeNode[] = [
-        { id: 'root1', text: 'Root 1', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root1', text: 'Root 1', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child1', text: 'Child 1', parentId: 'root1', order: 0 },
-        { id: 'root2', text: 'Root 2', parentId: null, order: 1 },
+        { id: 'root2', text: 'Root 2', parentId: ROOT_NODE_ID, order: 1 },
         { id: 'child2', text: 'Child 2', parentId: 'root2', order: 0 },
       ];
 
@@ -60,7 +63,8 @@ describe('layoutCalculator', () => {
     // 深くネストされたツリーでLRレイアウト（左右配置）が正しく機能することを確認
     it('should handle deeply nested tree', async () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'level1', text: 'Level 1', parentId: 'root', order: 0 },
         { id: 'level2', text: 'Level 2', parentId: 'level1', order: 0 },
         { id: 'level3', text: 'Level 3', parentId: 'level2', order: 0 },
@@ -98,7 +102,8 @@ describe('layoutCalculator', () => {
     // テキストが空の場合にデフォルトラベル「...」が使用されることを確認
     it('should use default label for empty text', async () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: '', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: '', parentId: ROOT_NODE_ID, order: 0 },
       ];
 
       const result = await calculateLayout(nodes);
@@ -110,7 +115,8 @@ describe('layoutCalculator', () => {
     // ノードのテキストがラベルとして保持されることを確認
     it('should preserve node text as label', async () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Custom Label', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Custom Label', parentId: ROOT_NODE_ID, order: 0 },
       ];
 
       const result = await calculateLayout(nodes);
@@ -122,7 +128,8 @@ describe('layoutCalculator', () => {
     // 親子ノード間にのみエッジ（線）が作成されることを確認
     it('should create edges only between parent and child', async () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child1', text: 'Child 1', parentId: 'root', order: 0 },
         { id: 'child2', text: 'Child 2', parentId: 'root', order: 1 },
         { id: 'grandchild', text: 'Grandchild', parentId: 'child1', order: 0 },

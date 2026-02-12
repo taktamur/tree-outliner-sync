@@ -6,14 +6,13 @@
  */
 import type { ElkNode, ElkExtendedEdge } from 'elkjs/lib/elk-api';
 import type { TreeNode } from '../store/types';
+import { ROOT_NODE_ID } from '../store/types';
 import { getChildren } from '../store/operations';
 
 /** ノードの基本幅（px） */
 export const BASE_NODE_WIDTH = 80;
 /** ノードの高さ（px） */
 export const NODE_HEIGHT = 40;
-/** ツリー間の縦方向の間隔（px） */
-const TREE_GAP = 60;
 /** パディング（左右合計、px） */
 export const HORIZONTAL_PADDING = 32; // 8px * 2 (padding) + 16px (余白)
 /** 1文字あたりの概算幅（px） */
@@ -87,7 +86,10 @@ const layoutSubtree = async (
   const subtreeNodes: TreeNode[] = [];
   const collectNodes = (parentId: string) => {
     const node = allNodes.find((n) => n.id === parentId);
-    if (node) subtreeNodes.push(node);
+    // ROOT_NODE_IDは隠しノードなので、レイアウトに含めない
+    if (node && node.id !== ROOT_NODE_ID) {
+      subtreeNodes.push(node);
+    }
     const children = getChildren(allNodes, parentId);
     children.forEach((c) => collectNodes(c.id));
   };
@@ -176,26 +178,13 @@ const layoutSubtree = async (
 };
 
 /**
- * 全ルートのサブツリーを縦に積んでレイアウト
- *
- * 複数のルートノードが存在する場合、それぞれを個別にレイアウト計算し、
- * 縦方向（Y軸）にTREE_GAPの間隔で積み重ねる。
+ * 隠しルートから始まる単一ツリーとしてレイアウト
  *
  * @param nodes 全ツリーノード
  * @returns 全ノードとエッジのレイアウト結果
  */
 export const calculateLayout = async (nodes: TreeNode[]): Promise<LayoutResult> => {
-  const roots = getChildren(nodes, null);
-  const allLayoutNodes: LayoutNode[] = [];
-  const allEdges: LayoutEdge[] = [];
-
-  let yOffset = 0;
-  for (const root of roots) {
-    const { nodes: layoutNodes, edges, height } = await layoutSubtree(nodes, root.id, yOffset);
-    allLayoutNodes.push(...layoutNodes);
-    allEdges.push(...edges);
-    yOffset += height + TREE_GAP; // 次のツリーのために高さ+間隔を加算
-  }
-
-  return { nodes: allLayoutNodes, edges: allEdges };
+  // 隠しルートノードからレイアウトを開始
+  const { nodes: layoutNodes, edges } = await layoutSubtree(nodes, ROOT_NODE_ID, 0);
+  return { nodes: layoutNodes, edges };
 };
