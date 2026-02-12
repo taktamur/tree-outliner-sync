@@ -231,6 +231,15 @@ const TreePanel = () => {
       // determineDropTargetV2を使ってドロップ先を判定（左側ノード吸着方式）
       const dropTarget: DropTarget = determineDropTargetV2(dragged, candidates);
 
+      // ===== デバッグログ =====
+      console.log('Debug D&D:', {
+        draggedNode: { id: draggedNode.id, x: dragged.x, y: dragged.y, label: dragged.label },
+        dropTarget,
+        candidateCount: candidates.length,
+        firstFewCandidates: candidates.slice(0, 3).map(c => ({ id: c.id, x: c.x, y: c.y, label: c.label })),
+      });
+      // ===== ここまで =====
+
       // insertModeがない場合（閾値超過でルート化）は、従来通りmove()を使用
       if (!dropTarget.insertMode || !dropTarget.targetNodeId) {
         const originalParentId = dragState.originalParentId ?? null;
