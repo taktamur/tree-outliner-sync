@@ -138,6 +138,7 @@ export const determineInsertMode = (
  * @param threshold 閾値（px）デフォルト120px
  * @param getHasChildren ノードIDから子の有無を判定する関数
  * @returns ドロップ先の情報（parentIdとinsertOrder）
+ * @deprecated 旧アルゴリズム。新しいアルゴリズムは determineDropTargetV2 を使用してください。
  */
 export const determineDropTarget = (
   dragged: NodeRect,
@@ -174,4 +175,132 @@ export const determineDropTarget = (
     insertMode,
     targetNodeId: nodeId,
   };
+};
+
+/**
+ * 左側ノード吸着方式でドロップ先を判定（V2アルゴリズム）
+ *
+ * 1. 候補を左側ノードと同列ノードに分類
+ * 2. 同列ノード優先で|ΔY|最小を選択（同率なら|ΔX|最小）
+ * 3. 距離閾値チェック: 最近接ノードが150px以上離れていればルート化
+ * 4. 左側ターゲット→child、同列ターゲット→before/after
+ *
+ * @param dragged ドラッグされたノード
+ * @param candidates 候補ノード（自分自身は含めない前提）
+ * @param threshold 距離閾値（px）デフォルト150px
+ * @returns ドロップ先の情報
+ */
+export const determineDropTargetV2 = (
+  dragged: NodeRect,
+  candidates: NodeRect[],
+  threshold = 150,
+): DropTarget => {
+  if (candidates.length === 0) {
+    return { parentId: null };
+  }
+
+  const draggedWidth = calculateNodeWidth(dragged.label);
+  const draggedCenterX = dragged.x + draggedWidth / 2;
+  const draggedCenterY = dragged.y + NODE_HEIGHT / 2;
+  const draggedLeft = dragged.x;
+
+  // 候補を左側ノードと同列ノードに分類
+  const leftNodes: NodeRect[] = [];
+  const sameColumnNodes: NodeRect[] = [];
+
+  for (const candidate of candidates) {
+    const candidateWidth = calculateNodeWidth(candidate.label);
+    const candidateRight = candidate.x + candidateWidth;
+
+    if (candidateRight < draggedLeft) {
+      // 左側ノード: 候補の右端 < ドラッグの左端
+      leftNodes.push(candidate);
+    } else {
+      // 同列ノード: X範囲が重なる
+      sameColumnNodes.push(candidate);
+    }
+  }
+
+  // 同列ノード優先で|ΔY|最小を選択
+  let targetNode: NodeRect | null = null;
+  let minDeltaY = Infinity;
+  let minDeltaX = Infinity;
+
+  // まず同列ノードから選択
+  for (const node of sameColumnNodes) {
+    const candidateCenterY = node.y + NODE_HEIGHT / 2;
+    const deltaY = Math.abs(draggedCenterY - candidateCenterY);
+
+    if (deltaY < minDeltaY || (deltaY === minDeltaY && Math.abs(node.x - dragged.x) < minDeltaX)) {
+      minDeltaY = deltaY;
+      minDeltaX = Math.abs(node.x - dragged.x);
+      targetNode = node;
+    }
+  }
+
+  // 同列ノードが見つからなければ左側ノードから選択
+  if (targetNode === null) {
+    for (const node of leftNodes) {
+      const candidateCenterY = node.y + NODE_HEIGHT / 2;
+      const deltaY = Math.abs(draggedCenterY - candidateCenterY);
+
+      if (deltaY < minDeltaY || (deltaY === minDeltaY && Math.abs(node.x - dragged.x) < minDeltaX)) {
+        minDeltaY = deltaY;
+        minDeltaX = Math.abs(node.x - dragged.x);
+        targetNode = node;
+      }
+    }
+  }
+
+  // ターゲットが見つからない場合はルート化
+  if (targetNode === null) {
+    return { parentId: null };
+  }
+
+  // 距離閾値チェック: 最近接ノードまでの距離を計算
+  const targetWidth = calculateNodeWidth(targetNode.label);
+  const targetCenterX = targetNode.x + targetWidth / 2;
+  const targetCenterY = targetNode.y + NODE_HEIGHT / 2;
+  const distance = Math.sqrt(
+    (draggedCenterX - targetCenterX) ** 2 +
+    (draggedCenterY - targetCenterY) ** 2,
+  );
+
+  // 距離が閾値以上ならルート化
+  if (distance >= threshold) {
+    return { parentId: null };
+  }
+
+  // 挿入モード決定
+  const isLeftTarget = leftNodes.includes(targetNode);
+  const insertMode = determineInsertModeV2(draggedCenterY, targetNode, isLeftTarget);
+
+  return {
+    parentId: targetNode.id,
+    insertMode,
+    targetNodeId: targetNode.id,
+  };
+};
+
+/**
+ * 左側ノード吸着方式で挿入モードを判定（V2アルゴリズム）
+ *
+ * @param draggedCenterY ドラッグされたノードの中心Y座標
+ * @param targetNode ターゲットノード
+ * @param isLeftTarget 左側ノードかどうか
+ * @returns 挿入モード
+ */
+export const determineInsertModeV2 = (
+  draggedCenterY: number,
+  targetNode: NodeRect,
+  isLeftTarget: boolean,
+): InsertMode => {
+  // 左側ターゲットは常にchild
+  if (isLeftTarget) {
+    return 'child';
+  }
+
+  // 同列ターゲットは中心Yで上下2分割
+  const targetCenterY = targetNode.y + NODE_HEIGHT / 2;
+  return draggedCenterY < targetCenterY ? 'before' : 'after';
 };
