@@ -16,8 +16,10 @@ describe('layoutCalculator', () => {
 
       const result = await calculateLayout(nodes);
 
-      expect(result.nodes).toHaveLength(3);
-      expect(result.edges).toHaveLength(2);
+      // ルートノードも含めて4つのノードが表示される
+      expect(result.nodes).toHaveLength(4);
+      // ルートノードから'root'へのエッジも含めて3つのエッジ
+      expect(result.edges).toHaveLength(3);
 
       // Check that all nodes have positions
       result.nodes.forEach((node) => {
@@ -30,6 +32,7 @@ describe('layoutCalculator', () => {
 
       // Check edges
       const edgeIds = result.edges.map((e) => e.id);
+      expect(edgeIds).toContain(`e-${ROOT_NODE_ID}-root`);
       expect(edgeIds).toContain('e-root-child1');
       expect(edgeIds).toContain('e-root-child2');
     });
@@ -46,8 +49,10 @@ describe('layoutCalculator', () => {
 
       const result = await calculateLayout(nodes);
 
-      expect(result.nodes).toHaveLength(4);
-      expect(result.edges).toHaveLength(2);
+      // ルートノードも含めて5つのノードが表示される
+      expect(result.nodes).toHaveLength(5);
+      // ルートノードから2つの子へのエッジも含めて4つのエッジ
+      expect(result.edges).toHaveLength(4);
 
       // Find nodes for each tree
       const root1Node = result.nodes.find((n) => n.id === 'root1');
@@ -72,8 +77,10 @@ describe('layoutCalculator', () => {
 
       const result = await calculateLayout(nodes);
 
-      expect(result.nodes).toHaveLength(4);
-      expect(result.edges).toHaveLength(3);
+      // ルートノードも含めて5つのノードが表示される
+      expect(result.nodes).toHaveLength(5);
+      // ルートノードからのエッジも含めて4つのエッジ
+      expect(result.edges).toHaveLength(4);
 
       // Check that X coordinates increase with depth (LR layout)
       const rootNode = result.nodes.find((n) => n.id === 'root');
@@ -108,8 +115,11 @@ describe('layoutCalculator', () => {
 
       const result = await calculateLayout(nodes);
 
-      expect(result.nodes).toHaveLength(1);
-      expect(result.nodes[0].data.label).toBe('...');
+      // ルートノードも含めて2つのノードが表示される
+      expect(result.nodes).toHaveLength(2);
+      // 空文字のノードを見つけて、そのラベルが'...'であることを確認
+      const emptyTextNode = result.nodes.find((n) => n.id === 'root');
+      expect(emptyTextNode?.data.label).toBe('...');
     });
 
     // ノードのテキストがラベルとして保持されることを確認
@@ -121,8 +131,11 @@ describe('layoutCalculator', () => {
 
       const result = await calculateLayout(nodes);
 
-      expect(result.nodes).toHaveLength(1);
-      expect(result.nodes[0].data.label).toBe('Custom Label');
+      // ルートノードも含めて2つのノードが表示される
+      expect(result.nodes).toHaveLength(2);
+      // カスタムラベルのノードを見つける
+      const customNode = result.nodes.find((n) => n.id === 'root');
+      expect(customNode?.data.label).toBe('Custom Label');
     });
 
     // 親子ノード間にのみエッジ（線）が作成されることを確認
@@ -137,13 +150,16 @@ describe('layoutCalculator', () => {
 
       const result = await calculateLayout(nodes);
 
-      expect(result.edges).toHaveLength(3);
+      // ルートノードからのエッジも含めて4つのエッジ
+      expect(result.edges).toHaveLength(4);
 
       const sources = result.edges.map((e) => e.source);
       const targets = result.edges.map((e) => e.target);
 
+      expect(sources).toContain(ROOT_NODE_ID);
       expect(sources).toContain('root');
       expect(sources).toContain('child1');
+      expect(targets).toContain('root');
       expect(targets).toContain('child1');
       expect(targets).toContain('child2');
       expect(targets).toContain('grandchild');

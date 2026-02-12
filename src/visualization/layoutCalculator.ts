@@ -86,8 +86,8 @@ const layoutSubtree = async (
   const subtreeNodes: TreeNode[] = [];
   const collectNodes = (parentId: string) => {
     const node = allNodes.find((n) => n.id === parentId);
-    // ROOT_NODE_IDは隠しノードなので、レイアウトに含めない
-    if (node && node.id !== ROOT_NODE_ID) {
+    // 全てのノードをレイアウトに含める（ルートノードも表示する）
+    if (node) {
       subtreeNodes.push(node);
     }
     const children = getChildren(allNodes, parentId);
