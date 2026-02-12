@@ -105,7 +105,7 @@ interface DragState {
  * React Flowでツリーをレンダリングし、D&D操作を可能にする。
  */
 const TreePanel = () => {
-  const { setSelectedNodeId, move, moveBefore, moveAfter, moveAsFirstChild } = useTreeStore();
+  const { setSelectedNodeId, moveBefore, moveAfter, moveAsFirstChild } = useTreeStore();
   const { nodes: layoutNodes, edges: layoutEdges } = useTreeLayout();
 
   // React Flow用のノードとエッジの状態管理
@@ -187,8 +187,8 @@ const TreePanel = () => {
   /**
    * ノードドラッグ中の処理（リアルタイムプレビュー）
    *
-   * ドラッグ中の位置から最近接ノードを探し、120px以内であれば
-   * プレビューエッジを表示する。
+   * ドラッグ中の位置から最近接ノードを探し、プレビューエッジを表示する。
+   * 隠しルートノードはD&D候補から除外する。
    */
   const onNodeDrag: NodeMouseHandler = useCallback(
     (_event, draggedNode) => {
@@ -231,39 +231,16 @@ const TreePanel = () => {
       // determineDropTargetV2を使ってドロップ先を判定（左側ノード吸着方式）
       const dropTarget: DropTarget = determineDropTargetV2(dragged, candidates);
 
-      // insertModeがない場合（閾値超過でルート化）は、従来通りmove()を使用
-      if (!dropTarget.insertMode || !dropTarget.targetNodeId) {
-        const originalParentId = dragState.originalParentId ?? null;
-        if (dropTarget.parentId !== originalParentId) {
-          move(draggedNode.id, dropTarget.parentId, dropTarget.insertOrder);
-        } else {
-          setFlowNodes(layoutNodes);
-        }
+      // insertModeに応じて適切な関数を呼び出す
+      if (dropTarget.insertMode === 'before' && dropTarget.targetNodeId) {
+        moveBefore(draggedNode.id, dropTarget.targetNodeId);
+      } else if (dropTarget.insertMode === 'after' && dropTarget.targetNodeId) {
+        moveAfter(draggedNode.id, dropTarget.targetNodeId);
+      } else if (dropTarget.insertMode === 'child' && dropTarget.targetNodeId) {
+        moveAsFirstChild(draggedNode.id, dropTarget.targetNodeId);
       } else {
-        // ターゲットノードを取得してルートノードかどうか判定
-        const { nodes } = useTreeStore.getState();
-        const targetNode = nodes.find((n) => n.id === dropTarget.targetNodeId);
-        const isTargetRoot = targetNode?.parentId === null;
-
-        // ルートノードの場合の特殊処理
-        if (isTargetRoot) {
-          if (dropTarget.insertMode === 'before') {
-            // ルートノードの直前に挿入（ルート化）
-            moveBefore(draggedNode.id, dropTarget.targetNodeId);
-          } else if (dropTarget.insertMode === 'child' || dropTarget.insertMode === 'after') {
-            // 中央ゾーンと下側ゾーンは直後に挿入（ルート化）
-            moveAfter(draggedNode.id, dropTarget.targetNodeId);
-          }
-        } else {
-          // 通常のノードの場合
-          if (dropTarget.insertMode === 'before') {
-            moveBefore(draggedNode.id, dropTarget.targetNodeId);
-          } else if (dropTarget.insertMode === 'after') {
-            moveAfter(draggedNode.id, dropTarget.targetNodeId);
-          } else if (dropTarget.insertMode === 'child') {
-            moveAsFirstChild(draggedNode.id, dropTarget.targetNodeId);
-          }
-        }
+        // フォールバック: レイアウトをリセット
+        setFlowNodes(layoutNodes);
       }
 
       // ドラッグ状態をリセット
@@ -274,7 +251,7 @@ const TreePanel = () => {
         targetNodeId: undefined,
       });
     },
-    [nodeToRect, layoutNodes, move, moveBefore, moveAfter, moveAsFirstChild, dragState.originalParentId, setFlowNodes],
+    [nodeToRect, layoutNodes, moveBefore, moveAfter, moveAsFirstChild, setFlowNodes],
   );
 
   return (

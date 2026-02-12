@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { TreeNode } from './types';
+import { ROOT_NODE_ID } from './types';
 import { generateId } from '../shared/idGenerator';
 import {
   indentNode,
@@ -91,7 +92,7 @@ interface TreeStore {
 /**
  * サンプルデータを生成
  *
- * 初期表示用に2つのルートノードと複数の子ノードを持つツリー構造を作成する。
+ * 初期表示用に隠しルートノードと2つのトップレベルノード、複数の子ノードを持つツリー構造を作成する。
  * @returns サンプルツリーノードの配列
  */
 const createSampleData = (): TreeNode[] => {
@@ -104,11 +105,12 @@ const createSampleData = (): TreeNode[] => {
   const c22 = generateId();
 
   return [
-    { id: r1, text: 'Root 1', parentId: null, order: 0 },
+    { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+    { id: r1, text: 'Root 1', parentId: ROOT_NODE_ID, order: 0 },
     { id: c11, text: 'Child 1.1', parentId: r1, order: 0 },
     { id: c111, text: 'Child 1.1.1', parentId: c11, order: 0 },
     { id: c12, text: 'Child 1.2', parentId: r1, order: 1 },
-    { id: r2, text: 'Root 2', parentId: null, order: 1 },
+    { id: r2, text: 'Root 2', parentId: ROOT_NODE_ID, order: 1 },
     { id: c21, text: 'Child 2.1', parentId: r2, order: 0 },
     { id: c22, text: 'Child 2.2', parentId: r2, order: 1 },
   ];
@@ -117,13 +119,19 @@ const createSampleData = (): TreeNode[] => {
 /**
  * 初期データを取得
  * localStorageに保存されたデータがあればそれを使用し、なければサンプルデータを使用する。
+ * localStorage互換性は不要。読み込み失敗時はデフォルトデータを使用。
  * @returns ツリーノードの配列
  */
 const getInitialData = (): TreeNode[] => {
   const saved = loadTreeState();
   if (saved && saved.length > 0) {
-    return saved;
+    // 隠しルートノードが存在するかチェック
+    const hasRootNode = saved.some((node) => node.id === ROOT_NODE_ID);
+    if (hasRootNode) {
+      return saved;
+    }
   }
+  // 隠しルートがない場合はサンプルデータにフォールバック
   return createSampleData();
 };
 
@@ -181,6 +189,8 @@ export const useTreeStore = create<TreeStore>()(
   },
 
   remove: (id) => {
+    // 隠しルートノードの削除を防止
+    if (id === ROOT_NODE_ID) return;
     set((state) => ({
       nodes: deleteNode(state.nodes, id),
       past: [...state.past, state.nodes].slice(-MAX_HISTORY_SIZE),

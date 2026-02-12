@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { TreeNode } from '../store/types';
+import { ROOT_NODE_ID } from '../store/types';
 import { calculateLayout } from './layoutCalculator';
 
 describe('layoutCalculator', () => {
@@ -7,15 +8,18 @@ describe('layoutCalculator', () => {
     // 単一ルートノードのツリーに対してレイアウトを計算するテスト
     it('should calculate layout for single root tree', async () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child1', text: 'Child 1', parentId: 'root', order: 0 },
         { id: 'child2', text: 'Child 2', parentId: 'root', order: 1 },
       ];
 
       const result = await calculateLayout(nodes);
 
-      expect(result.nodes).toHaveLength(3);
-      expect(result.edges).toHaveLength(2);
+      // ルートノードも含めて4つのノードが表示される
+      expect(result.nodes).toHaveLength(4);
+      // ルートノードから'root'へのエッジも含めて3つのエッジ
+      expect(result.edges).toHaveLength(3);
 
       // Check that all nodes have positions
       result.nodes.forEach((node) => {
@@ -28,6 +32,7 @@ describe('layoutCalculator', () => {
 
       // Check edges
       const edgeIds = result.edges.map((e) => e.id);
+      expect(edgeIds).toContain(`e-${ROOT_NODE_ID}-root`);
       expect(edgeIds).toContain('e-root-child1');
       expect(edgeIds).toContain('e-root-child2');
     });
@@ -35,16 +40,19 @@ describe('layoutCalculator', () => {
     // 複数ルートノードのツリーに対してレイアウトを計算し、縦方向に配置されることを確認
     it('should calculate layout for multiple root trees', async () => {
       const nodes: TreeNode[] = [
-        { id: 'root1', text: 'Root 1', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root1', text: 'Root 1', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child1', text: 'Child 1', parentId: 'root1', order: 0 },
-        { id: 'root2', text: 'Root 2', parentId: null, order: 1 },
+        { id: 'root2', text: 'Root 2', parentId: ROOT_NODE_ID, order: 1 },
         { id: 'child2', text: 'Child 2', parentId: 'root2', order: 0 },
       ];
 
       const result = await calculateLayout(nodes);
 
-      expect(result.nodes).toHaveLength(4);
-      expect(result.edges).toHaveLength(2);
+      // ルートノードも含めて5つのノードが表示される
+      expect(result.nodes).toHaveLength(5);
+      // ルートノードから2つの子へのエッジも含めて4つのエッジ
+      expect(result.edges).toHaveLength(4);
 
       // Find nodes for each tree
       const root1Node = result.nodes.find((n) => n.id === 'root1');
@@ -60,7 +68,8 @@ describe('layoutCalculator', () => {
     // 深くネストされたツリーでLRレイアウト（左右配置）が正しく機能することを確認
     it('should handle deeply nested tree', async () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'level1', text: 'Level 1', parentId: 'root', order: 0 },
         { id: 'level2', text: 'Level 2', parentId: 'level1', order: 0 },
         { id: 'level3', text: 'Level 3', parentId: 'level2', order: 0 },
@@ -68,8 +77,10 @@ describe('layoutCalculator', () => {
 
       const result = await calculateLayout(nodes);
 
-      expect(result.nodes).toHaveLength(4);
-      expect(result.edges).toHaveLength(3);
+      // ルートノードも含めて5つのノードが表示される
+      expect(result.nodes).toHaveLength(5);
+      // ルートノードからのエッジも含めて4つのエッジ
+      expect(result.edges).toHaveLength(4);
 
       // Check that X coordinates increase with depth (LR layout)
       const rootNode = result.nodes.find((n) => n.id === 'root');
@@ -98,31 +109,40 @@ describe('layoutCalculator', () => {
     // テキストが空の場合にデフォルトラベル「...」が使用されることを確認
     it('should use default label for empty text', async () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: '', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: '', parentId: ROOT_NODE_ID, order: 0 },
       ];
 
       const result = await calculateLayout(nodes);
 
-      expect(result.nodes).toHaveLength(1);
-      expect(result.nodes[0].data.label).toBe('...');
+      // ルートノードも含めて2つのノードが表示される
+      expect(result.nodes).toHaveLength(2);
+      // 空文字のノードを見つけて、そのラベルが'...'であることを確認
+      const emptyTextNode = result.nodes.find((n) => n.id === 'root');
+      expect(emptyTextNode?.data.label).toBe('...');
     });
 
     // ノードのテキストがラベルとして保持されることを確認
     it('should preserve node text as label', async () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Custom Label', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Custom Label', parentId: ROOT_NODE_ID, order: 0 },
       ];
 
       const result = await calculateLayout(nodes);
 
-      expect(result.nodes).toHaveLength(1);
-      expect(result.nodes[0].data.label).toBe('Custom Label');
+      // ルートノードも含めて2つのノードが表示される
+      expect(result.nodes).toHaveLength(2);
+      // カスタムラベルのノードを見つける
+      const customNode = result.nodes.find((n) => n.id === 'root');
+      expect(customNode?.data.label).toBe('Custom Label');
     });
 
     // 親子ノード間にのみエッジ（線）が作成されることを確認
     it('should create edges only between parent and child', async () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child1', text: 'Child 1', parentId: 'root', order: 0 },
         { id: 'child2', text: 'Child 2', parentId: 'root', order: 1 },
         { id: 'grandchild', text: 'Grandchild', parentId: 'child1', order: 0 },
@@ -130,13 +150,16 @@ describe('layoutCalculator', () => {
 
       const result = await calculateLayout(nodes);
 
-      expect(result.edges).toHaveLength(3);
+      // ルートノードからのエッジも含めて4つのエッジ
+      expect(result.edges).toHaveLength(4);
 
       const sources = result.edges.map((e) => e.source);
       const targets = result.edges.map((e) => e.target);
 
+      expect(sources).toContain(ROOT_NODE_ID);
       expect(sources).toContain('root');
       expect(sources).toContain('child1');
+      expect(targets).toContain('root');
       expect(targets).toContain('child1');
       expect(targets).toContain('child2');
       expect(targets).toContain('grandchild');

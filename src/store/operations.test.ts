@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { TreeNode } from './types';
+import { ROOT_NODE_ID } from './types';
 import {
   getChildren,
   getDescendantIds,
@@ -21,7 +22,8 @@ describe('treeOperations', () => {
     // 親ノードの子ノードをorder順にソートして取得するテスト
     it('should return children of a parent sorted by order', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child2', text: 'Child 2', parentId: 'root', order: 1 },
         { id: 'child1', text: 'Child 1', parentId: 'root', order: 0 },
       ];
@@ -31,14 +33,15 @@ describe('treeOperations', () => {
       expect(children[1].id).toBe('child2');
     });
 
-    // parentIdがnullの場合にルートノードを取得することを確認
-    it('should return root nodes when parentId is null', () => {
+    // parentIdがROOT_NODE_IDの場合にルートノードを取得することを確認
+    it('should return root nodes when parentId is ROOT_NODE_ID', () => {
       const nodes: TreeNode[] = [
-        { id: 'root1', text: 'Root 1', parentId: null, order: 0 },
-        { id: 'root2', text: 'Root 2', parentId: null, order: 1 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root1', text: 'Root 1', parentId: ROOT_NODE_ID, order: 0 },
+        { id: 'root2', text: 'Root 2', parentId: ROOT_NODE_ID, order: 1 },
         { id: 'child', text: 'Child', parentId: 'root1', order: 0 },
       ];
-      const roots = getChildren(nodes, null);
+      const roots = getChildren(nodes, ROOT_NODE_ID);
       expect(roots).toHaveLength(2);
       expect(roots[0].id).toBe('root1');
       expect(roots[1].id).toBe('root2');
@@ -47,7 +50,8 @@ describe('treeOperations', () => {
     // 子ノードが存在しない場合に空配列を返すことを確認
     it('should return empty array if no children exist', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
       ];
       const children = getChildren(nodes, 'root');
       expect(children).toHaveLength(0);
@@ -58,7 +62,8 @@ describe('treeOperations', () => {
     // すべての子孫ノードのIDを再帰的に取得するテスト
     it('should return all descendant IDs recursively', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child1', text: 'Child 1', parentId: 'root', order: 0 },
         { id: 'child2', text: 'Child 2', parentId: 'root', order: 1 },
         { id: 'grandchild', text: 'Grandchild', parentId: 'child1', order: 0 },
@@ -73,7 +78,8 @@ describe('treeOperations', () => {
     // リーフノード（子を持たないノード）の場合に空配列を返すことを確認
     it('should return empty array for leaf nodes', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'leaf', text: 'Leaf', parentId: 'root', order: 0 },
       ];
       const descendants = getDescendantIds(nodes, 'leaf');
@@ -85,10 +91,11 @@ describe('treeOperations', () => {
     // ノードを深さ優先探索（DFS）順で返すテスト
     it('should return nodes in DFS order', () => {
       const nodes: TreeNode[] = [
-        { id: 'root1', text: 'Root 1', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root1', text: 'Root 1', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child1-1', text: 'Child 1.1', parentId: 'root1', order: 0 },
         { id: 'child1-2', text: 'Child 1.2', parentId: 'root1', order: 1 },
-        { id: 'root2', text: 'Root 2', parentId: null, order: 1 },
+        { id: 'root2', text: 'Root 2', parentId: ROOT_NODE_ID, order: 1 },
         { id: 'grandchild', text: 'Grandchild', parentId: 'child1-1', order: 0 },
       ];
       const flattened = getFlattenedOrder(nodes);
@@ -112,7 +119,8 @@ describe('treeOperations', () => {
     // ネストされたノードの正しい深さを返すテスト
     it('should return correct depth for nested nodes', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child', text: 'Child', parentId: 'root', order: 0 },
         { id: 'grandchild', text: 'Grandchild', parentId: 'child', order: 0 },
       ];
@@ -124,7 +132,8 @@ describe('treeOperations', () => {
     // 存在しないノードに対して0を返すことを確認
     it('should return 0 for non-existent node', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
       ];
       expect(getDepth(nodes, 'nonexistent')).toBe(0);
     });
@@ -134,7 +143,8 @@ describe('treeOperations', () => {
     // ノードをインデントして直前の兄弟ノードの子にするテスト
     it('should indent node to become child of previous sibling', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child1', text: 'Child 1', parentId: 'root', order: 0 },
         { id: 'child2', text: 'Child 2', parentId: 'root', order: 1 },
       ];
@@ -147,7 +157,8 @@ describe('treeOperations', () => {
     // ノードが最初の兄弟の場合にnullを返すことを確認
     it('should return null if node is first sibling', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child1', text: 'Child 1', parentId: 'root', order: 0 },
         { id: 'child2', text: 'Child 2', parentId: 'root', order: 1 },
       ];
@@ -158,7 +169,8 @@ describe('treeOperations', () => {
     // ノードが存在しない場合にnullを返すことを確認
     it('should return null if node does not exist', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
       ];
       const result = indentNode(nodes, 'nonexistent');
       expect(result).toBeNull();
@@ -169,7 +181,8 @@ describe('treeOperations', () => {
     // ノードをアウトデントして親の兄弟にするテスト
     it('should outdent node to become sibling of parent', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child', text: 'Child', parentId: 'root', order: 0 },
         { id: 'grandchild', text: 'Grandchild', parentId: 'child', order: 0 },
       ];
@@ -182,7 +195,8 @@ describe('treeOperations', () => {
     // ノードがルートの場合にnullを返すことを確認
     it('should return null if node is root', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
       ];
       const result = outdentNode(nodes, 'root');
       expect(result).toBeNull();
@@ -191,7 +205,8 @@ describe('treeOperations', () => {
     // ノードが存在しない場合にnullを返すことを確認
     it('should return null if node does not exist', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
       ];
       const result = outdentNode(nodes, 'nonexistent');
       expect(result).toBeNull();
@@ -202,7 +217,8 @@ describe('treeOperations', () => {
     // 兄弟ノードのorder値を0,1,2...に正規化するテスト
     it('should normalize sibling orders to 0,1,2...', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child1', text: 'Child 1', parentId: 'root', order: 0.5 },
         { id: 'child2', text: 'Child 2', parentId: 'root', order: 2.7 },
         { id: 'child3', text: 'Child 3', parentId: 'root', order: 1.2 },
@@ -217,7 +233,8 @@ describe('treeOperations', () => {
     // 兄弟でないノードには影響しないことを確認
     it('should not affect non-sibling nodes', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child1', text: 'Child 1', parentId: 'root', order: 1.5 },
         { id: 'other', text: 'Other', parentId: 'different', order: 3.7 },
       ];
@@ -231,11 +248,12 @@ describe('treeOperations', () => {
     // 指定したノードの後ろに新しいノードを兄弟として追加するテスト
     it('should add new node after specified node as sibling', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child1', text: 'Child 1', parentId: 'root', order: 0 },
         { id: 'child2', text: 'Child 2', parentId: 'root', order: 1 },
       ];
-      const newNode: TreeNode = { id: 'new', text: 'New', parentId: null, order: 0 };
+      const newNode: TreeNode = { id: 'new', text: 'New', parentId: ROOT_NODE_ID, order: 0 };
       const result = addNodeAfter(nodes, 'child1', newNode);
 
       const addedNode = result.find((n) => n.id === 'new');
@@ -253,11 +271,12 @@ describe('treeOperations', () => {
     // 指定したノードが存在しない場合でもノードを追加できることを確認
     it('should add node even if afterNode does not exist', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
       ];
-      const newNode: TreeNode = { id: 'new', text: 'New', parentId: null, order: 0 };
+      const newNode: TreeNode = { id: 'new', text: 'New', parentId: ROOT_NODE_ID, order: 0 };
       const result = addNodeAfter(nodes, 'nonexistent', newNode);
-      expect(result).toHaveLength(2);
+      expect(result).toHaveLength(3);
       expect(result.find((n) => n.id === 'new')).toBeDefined();
     });
   });
@@ -266,7 +285,8 @@ describe('treeOperations', () => {
     // ノードを削除し、その子ノードを親の階層に昇格させるテスト
     it('should delete node and promote children', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child', text: 'Child', parentId: 'root', order: 0 },
         { id: 'grandchild1', text: 'Grandchild 1', parentId: 'child', order: 0 },
         { id: 'grandchild2', text: 'Grandchild 2', parentId: 'child', order: 1 },
@@ -284,7 +304,8 @@ describe('treeOperations', () => {
     // ノードが存在しない場合に配列を変更せず返すことを確認
     it('should return unchanged array if node does not exist', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
       ];
       const result = deleteNode(nodes, 'nonexistent');
       expect(result).toEqual(nodes);
@@ -295,8 +316,9 @@ describe('treeOperations', () => {
     // ノードを新しい親ノードに移動するテスト
     it('should move node to new parent', () => {
       const nodes: TreeNode[] = [
-        { id: 'root1', text: 'Root 1', parentId: null, order: 0 },
-        { id: 'root2', text: 'Root 2', parentId: null, order: 1 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root1', text: 'Root 1', parentId: ROOT_NODE_ID, order: 0 },
+        { id: 'root2', text: 'Root 2', parentId: ROOT_NODE_ID, order: 1 },
         { id: 'child', text: 'Child', parentId: 'root1', order: 0 },
       ];
       const result = moveNode(nodes, 'child', 'root2');
@@ -308,7 +330,8 @@ describe('treeOperations', () => {
     // 循環参照を防ぐことを確認（ノードを自分の子孫に移動できない）
     it('should prevent circular reference', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child', text: 'Child', parentId: 'root', order: 0 },
         { id: 'grandchild', text: 'Grandchild', parentId: 'child', order: 0 },
       ];
@@ -319,29 +342,32 @@ describe('treeOperations', () => {
     // ノードを自分自身に移動しようとした場合にnullを返すことを確認
     it('should return null if moving node to itself', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
       ];
       const result = moveNode(nodes, 'root', 'root');
       expect(result).toBeNull();
     });
 
-    // ノードをルートレベルに移動できることを確認（親をnullにする）
-    it('should allow moving to root (null parent)', () => {
+    // ノードをルートレベルに移動できることを確認（親をROOT_NODE_IDにする）
+    it('should allow moving to root (ROOT_NODE_ID parent)', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child', text: 'Child', parentId: 'root', order: 0 },
       ];
-      const result = moveNode(nodes, 'child', null);
+      const result = moveNode(nodes, 'child', ROOT_NODE_ID);
       expect(result).not.toBeNull();
       const child = result!.find((n) => n.id === 'child');
-      expect(child?.parentId).toBeNull();
+      expect(child?.parentId).toBe(ROOT_NODE_ID);
     });
   });
 
   describe('moveNodeBefore', () => {
     it('should move node before target node as sibling', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child1', text: 'Child 1', parentId: 'root', order: 0 },
         { id: 'child2', text: 'Child 2', parentId: 'root', order: 1 },
         { id: 'child3', text: 'Child 3', parentId: 'root', order: 2 },
@@ -359,7 +385,8 @@ describe('treeOperations', () => {
 
     it('should return null if target node not found', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
       ];
       const result = moveNodeBefore(nodes, 'root', 'nonexistent');
       expect(result).toBeNull();
@@ -369,7 +396,8 @@ describe('treeOperations', () => {
   describe('moveNodeAfter', () => {
     it('should move node after target node as sibling', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child1', text: 'Child 1', parentId: 'root', order: 0 },
         { id: 'child2', text: 'Child 2', parentId: 'root', order: 1 },
         { id: 'child3', text: 'Child 3', parentId: 'root', order: 2 },
@@ -387,7 +415,8 @@ describe('treeOperations', () => {
 
     it('should return null if target node not found', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
       ];
       const result = moveNodeAfter(nodes, 'root', 'nonexistent');
       expect(result).toBeNull();
@@ -397,7 +426,8 @@ describe('treeOperations', () => {
   describe('moveNodeAsFirstChild', () => {
     it('should move node as first child of target node', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child1', text: 'Child 1', parentId: 'root', order: 0 },
         { id: 'child2', text: 'Child 2', parentId: 'root', order: 1 },
         { id: 'grandchild', text: 'Grandchild', parentId: 'child1', order: 0 },
@@ -414,7 +444,8 @@ describe('treeOperations', () => {
 
     it('should prevent circular reference', () => {
       const nodes: TreeNode[] = [
-        { id: 'root', text: 'Root', parentId: null, order: 0 },
+        { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 },
+        { id: 'root', text: 'Root', parentId: ROOT_NODE_ID, order: 0 },
         { id: 'child', text: 'Child', parentId: 'root', order: 0 },
       ];
 
