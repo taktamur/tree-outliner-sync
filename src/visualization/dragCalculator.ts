@@ -181,7 +181,7 @@ export const determineDropTarget = (
  * 左側ノード吸着方式でドロップ先を判定（V2アルゴリズム）
  *
  * 1. 候補を左側ノードと同列ノードに分類
- * 2. 左側ノード優先で|ΔY|最小を選択（同率なら|ΔX|最小）
+ * 2. 同列ノード優先で|ΔY|最小を選択（同率なら|ΔX|最小）
  * 3. 左側ターゲット→child、同列ターゲット→before/after
  *
  * @param dragged ドラッグされたノード
@@ -216,13 +216,13 @@ export const determineDropTargetV2 = (
     }
   }
 
-  // 左側ノード優先で|ΔY|最小を選択
+  // 同列ノード優先で|ΔY|最小を選択
   let targetNode: NodeRect | null = null;
   let minDeltaY = Infinity;
   let minDeltaX = Infinity;
 
-  // 左側ノードから選択
-  for (const node of leftNodes) {
+  // まず同列ノードから選択
+  for (const node of sameColumnNodes) {
     const candidateCenterY = node.y + NODE_HEIGHT / 2;
     const deltaY = Math.abs(draggedCenterY - candidateCenterY);
 
@@ -233,9 +233,9 @@ export const determineDropTargetV2 = (
     }
   }
 
-  // 左側ノードが見つからなければ同列ノードから選択
+  // 同列ノードが見つからなければ左側ノードから選択
   if (targetNode === null) {
-    for (const node of sameColumnNodes) {
+    for (const node of leftNodes) {
       const candidateCenterY = node.y + NODE_HEIGHT / 2;
       const deltaY = Math.abs(draggedCenterY - candidateCenterY);
 

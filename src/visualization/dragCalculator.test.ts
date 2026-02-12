@@ -391,7 +391,7 @@ describe('dragCalculator', () => {
       expect(result.insertMode).toBe('child'); // 左側ノードは常にchild
     });
 
-    it('should prefer left node over same-column node', () => {
+    it('should prefer same-column node over left node', () => {
       // ドラッグ: 幅80px、左端100、中心Y: 120
       const dragged: NodeRect = {
         id: 'dragged',
@@ -407,9 +407,9 @@ describe('dragCalculator', () => {
 
       const result = determineDropTargetV2(dragged, candidates);
 
-      // 左側ノード優先（ΔYが大きくても）
-      expect(result.targetNodeId).toBe('left');
-      expect(result.insertMode).toBe('child');
+      // 同列ノード優先（ΔYが小さい）
+      expect(result.targetNodeId).toBe('same');
+      expect(result.insertMode).toBe('after'); // 同列ノード、中心Y同じなので after
     });
 
     it('should select same-column node when no left nodes exist', () => {
@@ -459,7 +459,7 @@ describe('dragCalculator', () => {
       expect(result2.insertMode).toBe('before');
     });
 
-    it('should break tie by |ΔX| when |ΔY| is equal', () => {
+    it('should prefer same-column node even when left node has smaller |ΔX|', () => {
       // ドラッグ: 幅80px、左端100、中心Y: 120
       const dragged: NodeRect = {
         id: 'dragged',
@@ -469,16 +469,16 @@ describe('dragCalculator', () => {
       };
 
       const candidates: NodeRect[] = [
-        { id: 'left1', x: 0, y: 100, label: 'L1' },     // 右端80、ΔY=0、ΔX=100
-        { id: 'left2', x: 50, y: 100, label: 'L2' },    // 右端130（幅80）、ΔY=0、ΔX=50（より近い）
+        { id: 'left1', x: 0, y: 100, label: 'L1' },     // 右端80、ΔY=0、ΔX=100（左側ノード）
+        { id: 'left2', x: 50, y: 100, label: 'L2' },    // 右端130（幅80）、ΔY=0、ΔX=50（同列ノード）
       ];
 
       const result = determineDropTargetV2(dragged, candidates);
 
       // left2は右端130 > dragged左端100なので同列ノード扱い
-      // left1のみが左側ノードなので、left1が選ばれる
-      expect(result.targetNodeId).toBe('left1');
-      expect(result.insertMode).toBe('child');
+      // 同列ノード優先なので、left2が選ばれる
+      expect(result.targetNodeId).toBe('left2');
+      expect(result.insertMode).toBe('after'); // 同列ノード、中心Y同じなので after
     });
 
     it('should handle no-overlap case correctly', () => {
