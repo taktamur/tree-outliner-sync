@@ -1,0 +1,1770 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>D&amp;D アルゴリズム改善案 — 左側ノード吸着方式</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+        background: #f8f9fa;
+        color: #333;
+        line-height: 1.7;
+        padding: 40px 20px;
+        max-width: 960px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 1.6em;
+        margin-bottom: 8px;
+      }
+      h2 {
+        font-size: 1.3em;
+        margin-top: 48px;
+        margin-bottom: 16px;
+        border-bottom: 2px solid #dee2e6;
+        padding-bottom: 4px;
+      }
+      h3 {
+        font-size: 1.1em;
+        margin-top: 32px;
+        margin-bottom: 12px;
+        color: #495057;
+      }
+      p {
+        margin-bottom: 12px;
+      }
+      code {
+        background: #e9ecef;
+        padding: 1px 5px;
+        border-radius: 3px;
+        font-size: 0.9em;
+      }
+      .subtitle {
+        color: #6c757d;
+        font-size: 0.95em;
+        margin-bottom: 32px;
+      }
+
+      .figure {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 24px;
+        margin: 16px 0 24px 0;
+      }
+      .figure-caption {
+        font-size: 0.85em;
+        color: #6c757d;
+        margin-top: 12px;
+        text-align: center;
+      }
+
+      svg text {
+        font-family: "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+      }
+
+      .zone-before {
+        fill: #dbeafe;
+      }
+      .zone-child {
+        fill: #dcfce7;
+      }
+      .zone-after {
+        fill: #fef3c7;
+      }
+
+      .node-rect {
+        fill: #fff;
+        stroke: #374151;
+        stroke-width: 2;
+        rx: 4;
+      }
+      .node-text {
+        font-size: 13px;
+        fill: #374151;
+        text-anchor: middle;
+        dominant-baseline: central;
+        font-weight: bold;
+      }
+      .dragged-node {
+        fill: #fef2f2;
+        stroke: #ef4444;
+        stroke-width: 2;
+        stroke-dasharray: 4 2;
+        rx: 4;
+      }
+      .dragged-text {
+        font-size: 12px;
+        fill: #ef4444;
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+      .result-label {
+        font-size: 13px;
+        fill: #dc2626;
+        font-weight: bold;
+      }
+      .center-dot {
+        fill: #ef4444;
+      }
+      .guide-line {
+        stroke: #d1d5db;
+        stroke-width: 1;
+        stroke-dasharray: 3 3;
+      }
+      .dim-label {
+        font-size: 10px;
+        fill: #9ca3af;
+      }
+      .scan-line {
+        stroke: #8b5cf6;
+        stroke-width: 1.5;
+        stroke-dasharray: 6 3;
+      }
+      .scan-area {
+        fill: #ede9fe;
+        fill-opacity: 0.4;
+        stroke: #8b5cf6;
+        stroke-width: 1;
+        stroke-dasharray: 4 2;
+      }
+
+      .comparison {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin: 16px 0;
+      }
+      .comparison > div {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 16px;
+      }
+      .comparison h4 {
+        font-size: 0.95em;
+        margin-bottom: 8px;
+        text-align: center;
+      }
+      .old {
+        border-top: 3px solid #9ca3af;
+      }
+      .new {
+        border-top: 3px solid #8b5cf6;
+      }
+
+      .note {
+        background: #fffbeb;
+        border-left: 4px solid #f59e0b;
+        padding: 12px 16px;
+        margin: 16px 0;
+        font-size: 0.9em;
+      }
+      .note-purple {
+        background: #f5f3ff;
+        border-left: 4px solid #8b5cf6;
+        padding: 12px 16px;
+        margin: 16px 0;
+        font-size: 0.9em;
+      }
+      .note-green {
+        background: #f0fdf4;
+        border-left: 4px solid #22c55e;
+        padding: 12px 16px;
+        margin: 16px 0;
+        font-size: 0.9em;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 12px 0;
+      }
+      th,
+      td {
+        border: 1px solid #dee2e6;
+        padding: 8px 12px;
+        text-align: left;
+        font-size: 0.9em;
+      }
+      th {
+        background: #f8f9fa;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>D&amp;D アルゴリズム改善案</h1>
+    <p class="subtitle">
+      ユークリッド距離 + 閾値方式 → <strong>左側ノード吸着方式</strong>
+    </p>
+
+    <!-- ================================================== -->
+    <h2>現状の問題</h2>
+    <!-- ================================================== -->
+
+    <p>
+      現在のアルゴリズムは「全候補ノードの中心座標とのユークリッド距離」で最近接ノードを探し、120pxの閾値で判定しています。
+    </p>
+
+    <p>これにはいくつかの不自然な点があります：</p>
+
+    <h3>問題1: 距離が遠いだけでルート化される</h3>
+
+    <div class="figure">
+      <svg viewBox="0 0 600 200" width="600" height="200">
+        <defs>
+          <marker
+            id="arrowGray"
+            markerWidth="8"
+            markerHeight="6"
+            refX="8"
+            refY="3"
+            orient="auto"
+          >
+            <path d="M0,0 L8,3 L0,6" fill="#6b7280" />
+          </marker>
+        </defs>
+
+        <!-- ツリー -->
+        <rect x="30" y="70" width="80" height="40" class="node-rect" />
+        <text x="70" y="90" class="node-text">Root</text>
+        <line
+          x1="110"
+          y1="90"
+          x2="160"
+          y2="60"
+          stroke="#374151"
+          stroke-width="1.5"
+        />
+        <line
+          x1="110"
+          y1="90"
+          x2="160"
+          y2="120"
+          stroke="#374151"
+          stroke-width="1.5"
+        />
+
+        <rect x="160" y="40" width="80" height="40" class="node-rect" />
+        <text x="200" y="60" class="node-text">A</text>
+
+        <rect x="160" y="100" width="80" height="40" class="node-rect" />
+        <text x="200" y="120" class="node-text">B</text>
+
+        <!-- ドラッグノード: Aの右側に配置 -->
+        <rect x="350" y="50" width="80" height="40" class="dragged-node" />
+        <text x="390" y="70" class="dragged-text">D</text>
+
+        <!-- 距離表示 -->
+        <line
+          x1="200"
+          y1="60"
+          x2="390"
+          y2="70"
+          stroke="#9ca3af"
+          stroke-width="1"
+          stroke-dasharray="4 2"
+        />
+        <text x="290" y="55" font-size="11" fill="#9ca3af">
+          190px (≥ 120px)
+        </text>
+
+        <!-- 結果 -->
+        <text x="350" y="120" class="result-label">現状: ルート化</text>
+        <text x="350" y="138" font-size="11" fill="#6b7280">
+          ユーザの意図: Aの子にしたい
+        </text>
+        <text x="350" y="153" font-size="11" fill="#6b7280">
+          （Aの右側にドラッグしているので）
+        </text>
+      </svg>
+      <p class="figure-caption">
+        LRレイアウトで右にドラッグ＝子にしたい意図。だが距離が遠いとルート化される。
+      </p>
+    </div>
+
+    <h3>問題2: ユークリッド距離は方向を考慮しない</h3>
+
+    <p>
+      LRレイアウトでは「左→右」が親→子の方向です。ドラッグノードがどのノードの右にいるかが重要なのに、ユークリッド距離では上下左右を区別しません。
+    </p>
+
+    <!-- ================================================== -->
+    <h2>新アルゴリズム: 左側ノード吸着方式</h2>
+    <!-- ================================================== -->
+
+    <p>
+      LRレイアウトの方向性を活かした新しい判定方式です。ドラッグ位置に応じて<strong>2つのモード</strong>に分かれます。
+    </p>
+
+    <div class="note-green">
+      <strong>核心のアイデア:</strong><br />
+      ・ノードの<strong>右側</strong>にドラッグ → 「子にしたい」→
+      <strong>左側吸着 → child</strong><br />
+      ・ノードと<strong>同じ列</strong>にドラッグ → 「兄弟の並びを変えたい」→
+      <strong>同列判定 → before / after</strong>
+    </div>
+
+    <!-- ================================================== -->
+    <h3>全体の流れ</h3>
+    <!-- ================================================== -->
+
+    <div class="figure">
+      <svg viewBox="0 0 700 120" width="700" height="120">
+        <!-- Step 1 -->
+        <rect
+          x="10"
+          y="20"
+          width="170"
+          height="80"
+          rx="8"
+          fill="#f5f3ff"
+          stroke="#8b5cf6"
+          stroke-width="1.5"
+        />
+        <text
+          x="95"
+          y="42"
+          text-anchor="middle"
+          font-size="12"
+          font-weight="bold"
+          fill="#6d28d9"
+        >
+          Step 1
+        </text>
+        <text x="95" y="58" text-anchor="middle" font-size="11" fill="#6d28d9">
+          候補の分類
+        </text>
+        <text x="95" y="74" text-anchor="middle" font-size="10" fill="#8b5cf6">
+          左側? 同列?
+        </text>
+        <text x="95" y="87" text-anchor="middle" font-size="10" fill="#8b5cf6">
+          候補なし?
+        </text>
+
+        <line
+          x1="180"
+          y1="60"
+          x2="220"
+          y2="60"
+          stroke="#6b7280"
+          stroke-width="2"
+          marker-end="url(#arrowGray)"
+        />
+
+        <!-- Step 2 -->
+        <rect
+          x="220"
+          y="20"
+          width="170"
+          height="80"
+          rx="8"
+          fill="#f5f3ff"
+          stroke="#8b5cf6"
+          stroke-width="1.5"
+        />
+        <text
+          x="305"
+          y="42"
+          text-anchor="middle"
+          font-size="12"
+          font-weight="bold"
+          fill="#6d28d9"
+        >
+          Step 2
+        </text>
+        <text x="305" y="58" text-anchor="middle" font-size="11" fill="#6d28d9">
+          ターゲット選択
+        </text>
+        <text x="305" y="74" text-anchor="middle" font-size="10" fill="#8b5cf6">
+          左側: |ΔY|最小
+        </text>
+        <text x="305" y="87" text-anchor="middle" font-size="10" fill="#8b5cf6">
+          同列: |ΔY|最小
+        </text>
+
+        <line
+          x1="390"
+          y1="60"
+          x2="430"
+          y2="60"
+          stroke="#6b7280"
+          stroke-width="2"
+          marker-end="url(#arrowGray)"
+        />
+
+        <!-- Step 3 -->
+        <rect
+          x="430"
+          y="20"
+          width="250"
+          height="80"
+          rx="8"
+          fill="#f5f3ff"
+          stroke="#8b5cf6"
+          stroke-width="1.5"
+        />
+        <text
+          x="555"
+          y="42"
+          text-anchor="middle"
+          font-size="12"
+          font-weight="bold"
+          fill="#6d28d9"
+        >
+          Step 3
+        </text>
+        <text x="555" y="58" text-anchor="middle" font-size="11" fill="#6d28d9">
+          挿入モード決定
+        </text>
+        <text x="555" y="74" text-anchor="middle" font-size="10" fill="#8b5cf6">
+          左側ターゲット → 常に child
+        </text>
+        <text x="555" y="87" text-anchor="middle" font-size="10" fill="#8b5cf6">
+          同列ターゲット → 縦3分割で before/after
+        </text>
+      </svg>
+    </div>
+
+    <!-- ================================================== -->
+    <h3>Step 1: 候補の分類</h3>
+    <!-- ================================================== -->
+
+    <p>
+      候補ノードを<strong>左側ノード</strong>と<strong>同列ノード</strong>に分類します。
+    </p>
+
+    <div class="figure">
+      <svg viewBox="0 0 650 240" width="650" height="240">
+        <defs>
+          <marker
+            id="arrowPurple"
+            markerWidth="8"
+            markerHeight="6"
+            refX="8"
+            refY="3"
+            orient="auto"
+          >
+            <path d="M0,0 L8,3 L0,6" fill="#8b5cf6" />
+          </marker>
+        </defs>
+
+        <!-- ドラッグノード -->
+        <rect x="300" y="80" width="100" height="40" class="dragged-node" />
+        <text x="350" y="100" class="dragged-text">D (drag)</text>
+
+        <!-- ドラッグノードの左端ライン -->
+        <line
+          x1="300"
+          y1="20"
+          x2="300"
+          y2="220"
+          stroke="#ef4444"
+          stroke-width="1.5"
+          stroke-dasharray="4 2"
+        />
+        <text x="302" y="16" font-size="10" fill="#ef4444">Dの左端</text>
+
+        <!-- ドラッグノードの右端ライン -->
+        <line
+          x1="400"
+          y1="20"
+          x2="400"
+          y2="220"
+          stroke="#ef4444"
+          stroke-width="1.5"
+          stroke-dasharray="4 2"
+        />
+        <text x="402" y="16" font-size="10" fill="#ef4444">Dの右端</text>
+
+        <!-- 左側の領域ラベル -->
+        <rect
+          x="10"
+          y="25"
+          width="120"
+          height="20"
+          rx="4"
+          fill="#dcfce7"
+          stroke="#22c55e"
+          stroke-width="1"
+        />
+        <text
+          x="70"
+          y="39"
+          text-anchor="middle"
+          font-size="10"
+          fill="#166534"
+          font-weight="bold"
+        >
+          左側ノード候補
+        </text>
+
+        <!-- 同列の領域ラベル -->
+        <rect
+          x="310"
+          y="25"
+          width="80"
+          height="20"
+          rx="4"
+          fill="#dbeafe"
+          stroke="#3b82f6"
+          stroke-width="1"
+        />
+        <text
+          x="350"
+          y="39"
+          text-anchor="middle"
+          font-size="10"
+          fill="#1d4ed8"
+          font-weight="bold"
+        >
+          同列候補
+        </text>
+
+        <!-- 右側の領域ラベル -->
+        <rect
+          x="480"
+          y="25"
+          width="80"
+          height="20"
+          rx="4"
+          fill="#f3f4f6"
+          stroke="#9ca3af"
+          stroke-width="1"
+        />
+        <text
+          x="520"
+          y="39"
+          text-anchor="middle"
+          font-size="10"
+          fill="#6b7280"
+          font-weight="bold"
+        >
+          対象外
+        </text>
+
+        <!-- 左側ノード: A -->
+        <rect
+          x="60"
+          y="70"
+          width="80"
+          height="40"
+          class="node-rect"
+          stroke="#22c55e"
+          stroke-width="2.5"
+        />
+        <text x="100" y="90" class="node-text" fill="#166534">A</text>
+        <text
+          x="100"
+          y="130"
+          text-anchor="middle"
+          font-size="10"
+          fill="#22c55e"
+        >
+          右端 140 &lt; 300
+        </text>
+        <text
+          x="100"
+          y="143"
+          text-anchor="middle"
+          font-size="10"
+          fill="#22c55e"
+        >
+          → 左側
+        </text>
+
+        <!-- 同列ノード: B（X範囲がDと重なる） -->
+        <rect
+          x="310"
+          y="150"
+          width="80"
+          height="40"
+          class="node-rect"
+          stroke="#3b82f6"
+          stroke-width="2.5"
+        />
+        <text x="350" y="170" class="node-text" fill="#1d4ed8">B</text>
+        <text
+          x="350"
+          y="210"
+          text-anchor="middle"
+          font-size="10"
+          fill="#3b82f6"
+        >
+          X範囲がDと重なる
+        </text>
+        <text
+          x="350"
+          y="223"
+          text-anchor="middle"
+          font-size="10"
+          fill="#3b82f6"
+        >
+          → 同列
+        </text>
+
+        <!-- 右側ノード: C -->
+        <rect
+          x="500"
+          y="70"
+          width="80"
+          height="40"
+          class="node-rect"
+          stroke="#9ca3af"
+          stroke-dasharray="4 2"
+        />
+        <text x="540" y="90" class="node-text" fill="#9ca3af">C</text>
+        <text
+          x="540"
+          y="130"
+          text-anchor="middle"
+          font-size="10"
+          fill="#9ca3af"
+        >
+          左端 500 &gt; 400
+        </text>
+        <text
+          x="540"
+          y="143"
+          text-anchor="middle"
+          font-size="10"
+          fill="#9ca3af"
+        >
+          → 対象外
+        </text>
+      </svg>
+      <p class="figure-caption">
+        左側: ノードの右端 &lt; Dの左端。 同列:
+        ノードのX範囲とDのX範囲が重なる。 右側: 対象外。
+      </p>
+    </div>
+
+    <!-- ================================================== -->
+    <h3>Step 2: ターゲット選択</h3>
+    <!-- ================================================== -->
+
+    <p>
+      <strong>左側ノード</strong
+      >が存在する場合は、その中から<strong>|ΔY|が最小</strong>のものをターゲットとします。<br />
+      |ΔY|が同じ候補が複数ある場合は、<strong>X座標が近い方（より直近の左側）</strong>を優先します。
+    </p>
+
+    <p>
+      左側ノードが存在しない場合は、<strong>同列ノード</strong>の中から<strong>|ΔY|が最小</strong>のものをターゲットとします。
+    </p>
+
+    <p>どちらも存在しない場合は<strong>ルート化</strong>です。</p>
+
+    <div class="note-purple">
+      <strong>左側ノード優先の理由:</strong>
+      LRレイアウトでは左が親、右が子です。ドラッグノードが右にいるということは、
+      左側のノードを「親候補」として探すのが最も自然です。
+      同列ノード（兄弟候補）は、左側に候補がないときのフォールバックです。
+    </div>
+
+    <!-- ================================================== -->
+    <h3>Step 3: 挿入モード決定</h3>
+    <!-- ================================================== -->
+
+    <p>
+      ターゲットがどのグループ（左側 /
+      同列）かによって、挿入モードの決め方が変わります。
+    </p>
+
+    <h3>3-A. 左側ターゲット → 常に child</h3>
+
+    <p>
+      左側のノードがターゲットの場合、ドラッグノードはそのノードの右にいます。<br />
+      これは「子にしたい」という意図なので、<strong>常に child</strong>
+      です。縦位置の判定は不要です。
+    </p>
+
+    <div class="figure">
+      <svg viewBox="0 0 600 220" width="600" height="220">
+        <!-- ターゲット -->
+        <rect
+          x="40"
+          y="40"
+          width="100"
+          height="40"
+          class="node-rect"
+          stroke="#22c55e"
+          stroke-width="2.5"
+        />
+        <text x="90" y="60" class="node-text">Target</text>
+        <text x="90" y="25" text-anchor="middle" font-size="10" fill="#22c55e">
+          左側ターゲット
+        </text>
+
+        <!-- 事例1: 右上 -->
+        <rect x="250" y="15" width="80" height="30" class="dragged-node" />
+        <text x="290" y="30" class="dragged-text" font-size="10">D</text>
+        <text x="350" y="34" font-size="12" fill="#166534" font-weight="bold">
+          → child
+        </text>
+
+        <!-- 事例2: 右横 -->
+        <rect x="250" y="48" width="80" height="30" class="dragged-node" />
+        <text x="290" y="63" class="dragged-text" font-size="10">D</text>
+        <text x="350" y="67" font-size="12" fill="#166534" font-weight="bold">
+          → child
+        </text>
+
+        <!-- 事例3: 右下 -->
+        <rect x="250" y="82" width="80" height="30" class="dragged-node" />
+        <text x="290" y="97" class="dragged-text" font-size="10">D</text>
+        <text x="350" y="101" font-size="12" fill="#166534" font-weight="bold">
+          → child
+        </text>
+
+        <!-- 事例4: はるか右 -->
+        <rect x="450" y="48" width="80" height="30" class="dragged-node" />
+        <text x="490" y="63" class="dragged-text" font-size="10">D</text>
+        <text x="540" y="67" font-size="12" fill="#166534" font-weight="bold">
+          → child
+        </text>
+
+        <text x="40" y="140" font-size="11" fill="#6b7280">
+          ターゲットの右側ならどこにドロップしても child。
+        </text>
+        <text x="40" y="158" font-size="11" fill="#6b7280">
+          距離に関係なく、縦位置にも関係なく、常にchild。
+        </text>
+
+        <!-- ツリーでの意味 -->
+        <text x="40" y="185" font-size="12" fill="#374151" font-weight="bold">
+          ツリー操作としての意味:
+        </text>
+        <text x="40" y="203" font-size="11" fill="#6b7280">
+          D は Target の子ノードとして先頭に挿入される
+        </text>
+      </svg>
+      <p class="figure-caption">
+        左側ターゲットの場合は常にchild。右にドラッグ = 子にしたい意図。
+      </p>
+    </div>
+
+    <h3>3-B. 同列ターゲット → 縦3分割で before / after</h3>
+
+    <p>
+      同列のノードがターゲットの場合、ドラッグノードはそのノードの上下どちらかにいます。<br />
+      ターゲットの<strong>中心Y座標</strong>を基準に、上半分なら
+      <code>before</code>、下半分なら <code>after</code> です。
+    </p>
+
+    <div class="figure">
+      <svg viewBox="0 0 600 220" width="600" height="220">
+        <!-- ターゲット（2分割表示） -->
+        <rect
+          x="120"
+          y="60"
+          width="120"
+          height="20"
+          class="zone-before"
+          stroke="#93c5fd"
+          stroke-width="1"
+        />
+        <rect
+          x="120"
+          y="80"
+          width="120"
+          height="20"
+          class="zone-after"
+          stroke="#fcd34d"
+          stroke-width="1"
+        />
+        <rect
+          x="120"
+          y="60"
+          width="120"
+          height="40"
+          fill="none"
+          stroke="#374151"
+          stroke-width="2"
+          rx="4"
+        />
+        <text x="180" y="82" class="node-text">Target</text>
+
+        <!-- 中心線 -->
+        <line
+          x1="100"
+          y1="80"
+          x2="250"
+          y2="80"
+          stroke="#6b7280"
+          stroke-width="1"
+          stroke-dasharray="3 3"
+        />
+        <text x="255" y="84" font-size="10" fill="#6b7280">中心Y</text>
+
+        <!-- ゾーンラベル -->
+        <text x="255" y="72" font-size="12" fill="#1d4ed8" font-weight="bold">
+          before
+        </text>
+        <text x="255" y="95" font-size="12" fill="#92400e" font-weight="bold">
+          after
+        </text>
+
+        <!-- 事例1: 上にドラッグ → before -->
+        <rect x="350" y="38" width="80" height="28" class="dragged-node" />
+        <text x="390" y="52" class="dragged-text" font-size="10">D</text>
+        <circle cx="390" cy="52" r="2" class="center-dot" />
+        <text x="440" y="56" font-size="12" fill="#1d4ed8" font-weight="bold">
+          → before
+        </text>
+        <text x="440" y="70" font-size="10" fill="#6b7280">
+          中心Yがターゲットより上
+        </text>
+
+        <!-- 事例2: 下にドラッグ → after -->
+        <rect x="350" y="90" width="80" height="28" class="dragged-node" />
+        <text x="390" y="104" class="dragged-text" font-size="10">D</text>
+        <circle cx="390" cy="104" r="2" class="center-dot" />
+        <text x="440" y="108" font-size="12" fill="#92400e" font-weight="bold">
+          → after
+        </text>
+        <text x="440" y="122" font-size="10" fill="#6b7280">
+          中心Yがターゲットより下
+        </text>
+
+        <!-- ツリーでの意味 -->
+        <text x="120" y="160" font-size="12" fill="#374151" font-weight="bold">
+          ツリー操作としての意味:
+        </text>
+        <text x="120" y="178" font-size="11" fill="#1d4ed8">
+          before: Target と同じ親の下に、Target の直前に挿入
+        </text>
+        <text x="120" y="196" font-size="11" fill="#92400e">
+          after: Target と同じ親の下に、Target の直後に挿入
+        </text>
+      </svg>
+      <p class="figure-caption">
+        同列ターゲットの場合は上半分 = before、下半分 = after。child
+        にはならない。
+      </p>
+    </div>
+
+    <div class="note">
+      <strong>なぜ同列では child がないのか:</strong>
+      同列にドラッグする操作は「兄弟の並び順を変えたい」という意図です。
+      子にしたい場合は、ターゲットの右側にドラッグすればよいので、 同列では
+      before / after の2択にすることで操作の意図が明確に分かれます。
+    </div>
+
+    <!-- ================================================== -->
+    <h2>具体例: ツリー上での操作</h2>
+    <!-- ================================================== -->
+
+    <h3>事例A: ノードの右にドラッグ → child</h3>
+
+    <div class="figure">
+      <svg viewBox="0 0 550 160" width="550" height="160">
+        <!-- ツリー -->
+        <rect x="20" y="50" width="80" height="40" class="node-rect" />
+        <text x="60" y="70" class="node-text">Parent</text>
+        <line
+          x1="100"
+          y1="70"
+          x2="150"
+          y2="40"
+          stroke="#374151"
+          stroke-width="1.5"
+        />
+        <line
+          x1="100"
+          y1="70"
+          x2="150"
+          y2="90"
+          stroke="#374151"
+          stroke-width="1.5"
+        />
+
+        <rect x="150" y="20" width="80" height="40" class="node-rect" />
+        <text x="190" y="40" class="node-text">子A</text>
+
+        <rect x="150" y="70" width="80" height="40" class="node-rect" />
+        <text x="190" y="90" class="node-text">子B</text>
+
+        <!-- ドラッグ: 子Aの右側 -->
+        <rect x="300" y="25" width="80" height="35" class="dragged-node" />
+        <text x="340" y="42" class="dragged-text" font-size="11">D</text>
+
+        <text x="400" y="38" class="result-label">→ child (子Aの子)</text>
+        <text x="400" y="56" font-size="11" fill="#6b7280">
+          子Aが左側ターゲット → 常にchild
+        </text>
+
+        <text x="300" y="100" font-size="11" fill="#6b7280">
+          操作の意図: Dを子Aの子にしたい
+        </text>
+        <text x="300" y="115" font-size="11" fill="#6b7280">
+          → 子Aの右側にドラッグするだけでOK
+        </text>
+      </svg>
+    </div>
+
+    <h3>事例B: 兄弟の上にドラッグ → before</h3>
+
+    <div class="figure">
+      <svg viewBox="0 0 550 180" width="550" height="180">
+        <!-- ツリー -->
+        <rect x="20" y="60" width="80" height="40" class="node-rect" />
+        <text x="60" y="80" class="node-text">Parent</text>
+        <line
+          x1="100"
+          y1="80"
+          x2="150"
+          y2="50"
+          stroke="#374151"
+          stroke-width="1.5"
+        />
+        <line
+          x1="100"
+          y1="80"
+          x2="150"
+          y2="100"
+          stroke="#374151"
+          stroke-width="1.5"
+        />
+
+        <rect x="150" y="30" width="80" height="40" class="node-rect" />
+        <text x="190" y="50" class="node-text">子A</text>
+
+        <rect x="150" y="80" width="80" height="40" class="node-rect" />
+        <text x="190" y="100" class="node-text">子B</text>
+
+        <!-- ドラッグ: 子Bの上 -->
+        <rect x="160" y="62" width="70" height="28" class="dragged-node" />
+        <text x="195" y="76" class="dragged-text" font-size="10">D</text>
+        <circle cx="195" cy="76" r="2" class="center-dot" />
+
+        <text x="280" y="72" class="result-label">→ before (子Bの前)</text>
+        <text x="280" y="90" font-size="11" fill="#6b7280">
+          子Bが同列ターゲット
+        </text>
+        <text x="280" y="105" font-size="11" fill="#6b7280">
+          Dの中心Yが子Bの中心Yより上
+        </text>
+
+        <text x="280" y="130" font-size="11" fill="#6b7280">
+          操作の意図: Dを子Aと子Bの間に入れたい
+        </text>
+        <text x="280" y="145" font-size="11" fill="#6b7280">
+          → 子Bの上半分にドラッグ
+        </text>
+      </svg>
+    </div>
+
+    <h3>事例C: 兄弟の下にドラッグ → after</h3>
+
+    <div class="figure">
+      <svg viewBox="0 0 550 180" width="550" height="180">
+        <!-- ツリー -->
+        <rect x="20" y="60" width="80" height="40" class="node-rect" />
+        <text x="60" y="80" class="node-text">Parent</text>
+        <line
+          x1="100"
+          y1="80"
+          x2="150"
+          y2="50"
+          stroke="#374151"
+          stroke-width="1.5"
+        />
+        <line
+          x1="100"
+          y1="80"
+          x2="150"
+          y2="100"
+          stroke="#374151"
+          stroke-width="1.5"
+        />
+
+        <rect x="150" y="30" width="80" height="40" class="node-rect" />
+        <text x="190" y="50" class="node-text">子A</text>
+
+        <rect x="150" y="80" width="80" height="40" class="node-rect" />
+        <text x="190" y="100" class="node-text">子B</text>
+
+        <!-- ドラッグ: 子Bの下 -->
+        <rect x="160" y="108" width="70" height="28" class="dragged-node" />
+        <text x="195" y="122" class="dragged-text" font-size="10">D</text>
+        <circle cx="195" cy="122" r="2" class="center-dot" />
+
+        <text x="280" y="110" class="result-label">→ after (子Bの後)</text>
+        <text x="280" y="128" font-size="11" fill="#6b7280">
+          子Bが同列ターゲット
+        </text>
+        <text x="280" y="143" font-size="11" fill="#6b7280">
+          Dの中心Yが子Bの中心Yより下
+        </text>
+
+        <text x="280" y="168" font-size="11" fill="#6b7280">
+          操作の意図: Dを子Bの後ろに入れたい
+        </text>
+      </svg>
+    </div>
+
+    <h3>事例D: 最左端にドラッグ → ルート化</h3>
+
+    <div class="figure">
+      <svg viewBox="0 0 550 160" width="550" height="160">
+        <!-- ドラッグノード: 最左端 -->
+        <rect x="10" y="50" width="60" height="35" class="dragged-node" />
+        <text x="40" y="67" class="dragged-text" font-size="10">D</text>
+
+        <!-- ツリー -->
+        <rect
+          x="150"
+          y="30"
+          width="80"
+          height="40"
+          class="node-rect"
+          stroke="#9ca3af"
+          stroke-dasharray="4 2"
+        />
+        <text x="190" y="50" class="node-text" fill="#9ca3af">Root</text>
+        <line
+          x1="230"
+          y1="50"
+          x2="280"
+          y2="30"
+          stroke="#d1d5db"
+          stroke-width="1.5"
+        />
+        <line
+          x1="230"
+          y1="50"
+          x2="280"
+          y2="70"
+          stroke="#d1d5db"
+          stroke-width="1.5"
+        />
+        <rect
+          x="280"
+          y="10"
+          width="80"
+          height="40"
+          class="node-rect"
+          stroke="#9ca3af"
+          stroke-dasharray="4 2"
+        />
+        <text x="320" y="30" class="node-text" fill="#9ca3af">子A</text>
+        <rect
+          x="280"
+          y="50"
+          width="80"
+          height="40"
+          class="node-rect"
+          stroke="#9ca3af"
+          stroke-dasharray="4 2"
+        />
+        <text x="320" y="70" class="node-text" fill="#9ca3af">子B</text>
+
+        <text x="10" y="110" class="result-label">
+          → ルート化 (parentId: null)
+        </text>
+        <text x="10" y="128" font-size="11" fill="#6b7280">
+          左側にも同列にも候補がない → 新しいルートノードになる
+        </text>
+      </svg>
+    </div>
+
+    <h3>事例E: 離れた右側でも確実にchild</h3>
+
+    <div class="figure">
+      <svg viewBox="0 0 600 160" width="600" height="160">
+        <!-- ターゲットノード -->
+        <rect
+          x="30"
+          y="50"
+          width="80"
+          height="40"
+          class="node-rect"
+          stroke="#22c55e"
+          stroke-width="2.5"
+        />
+        <text x="70" y="70" class="node-text">Leaf</text>
+        <text x="70" y="105" text-anchor="middle" font-size="10" fill="#22c55e">
+          左側ターゲット
+        </text>
+
+        <!-- ドラッグ: はるか右に -->
+        <rect x="400" y="45" width="80" height="35" class="dragged-node" />
+        <text x="440" y="62" class="dragged-text" font-size="10">D</text>
+
+        <!-- 距離 -->
+        <line
+          x1="110"
+          y1="70"
+          x2="400"
+          y2="62"
+          stroke="#8b5cf6"
+          stroke-width="1"
+          stroke-dasharray="6 3"
+        />
+        <text x="250" y="55" text-anchor="middle" font-size="10" fill="#8b5cf6">
+          290px（距離は無関係）
+        </text>
+
+        <text x="400" y="100" class="result-label">→ child</text>
+        <text x="400" y="118" font-size="11" fill="#6b7280">
+          現行なら120px超でルート化されるが
+        </text>
+        <text x="400" y="133" font-size="11" fill="#6b7280">
+          新案では距離に関係なくchildになる
+        </text>
+      </svg>
+      <p class="figure-caption">
+        現行アルゴリズムとの最大の違い。距離が遠くても、左側にあるノードの子になる。
+      </p>
+    </div>
+
+    <!-- ================================================== -->
+    <h2>現行 vs 新アルゴリズムの比較</h2>
+    <!-- ================================================== -->
+
+    <h3>ケース1: 右に離れた位置にドロップ</h3>
+
+    <div class="comparison">
+      <div class="old">
+        <h4>現行アルゴリズム</h4>
+        <svg viewBox="0 0 260 140" width="260" height="140">
+          <rect x="10" y="40" width="80" height="40" class="node-rect" />
+          <text x="50" y="60" class="node-text">A</text>
+          <rect x="170" y="40" width="80" height="40" class="dragged-node" />
+          <text x="210" y="60" class="dragged-text">D</text>
+          <line
+            x1="50"
+            y1="60"
+            x2="210"
+            y2="60"
+            stroke="#9ca3af"
+            stroke-width="1"
+            stroke-dasharray="4 2"
+          />
+          <text
+            x="130"
+            y="50"
+            text-anchor="middle"
+            font-size="10"
+            fill="#9ca3af"
+          >
+            160px ≥ 120px
+          </text>
+          <text
+            x="130"
+            y="110"
+            text-anchor="middle"
+            font-size="12"
+            fill="#dc2626"
+            font-weight="bold"
+          >
+            → ルート化
+          </text>
+          <text
+            x="130"
+            y="128"
+            text-anchor="middle"
+            font-size="10"
+            fill="#6b7280"
+          >
+            閾値を超えたため
+          </text>
+        </svg>
+      </div>
+      <div class="new">
+        <h4>新アルゴリズム</h4>
+        <svg viewBox="0 0 260 140" width="260" height="140">
+          <rect
+            x="10"
+            y="40"
+            width="80"
+            height="40"
+            class="node-rect"
+            stroke="#22c55e"
+            stroke-width="2.5"
+          />
+          <text x="50" y="60" class="node-text">A</text>
+          <rect x="170" y="40" width="80" height="40" class="dragged-node" />
+          <text x="210" y="60" class="dragged-text">D</text>
+          <line
+            x1="170"
+            y1="60"
+            x2="90"
+            y2="60"
+            class="scan-line"
+            marker-end="url(#arrowPurple)"
+          />
+          <text
+            x="130"
+            y="50"
+            text-anchor="middle"
+            font-size="10"
+            fill="#7c3aed"
+          >
+            左側 → child
+          </text>
+          <text
+            x="130"
+            y="110"
+            text-anchor="middle"
+            font-size="12"
+            fill="#22c55e"
+            font-weight="bold"
+          >
+            → Aの child
+          </text>
+          <text
+            x="130"
+            y="128"
+            text-anchor="middle"
+            font-size="10"
+            fill="#6b7280"
+          >
+            距離に関係なく左側のAを検出
+          </text>
+        </svg>
+      </div>
+    </div>
+
+    <h3>ケース2: 兄弟の並び替え</h3>
+
+    <div class="comparison">
+      <div class="old">
+        <h4>現行アルゴリズム</h4>
+        <svg viewBox="0 0 260 160" width="260" height="160">
+          <rect x="30" y="20" width="70" height="35" class="node-rect" />
+          <text x="65" y="38" class="node-text" font-size="11">子A</text>
+          <rect x="30" y="70" width="70" height="35" class="node-rect" />
+          <text x="65" y="88" class="node-text" font-size="11">子B</text>
+          <rect x="40" y="50" width="60" height="25" class="dragged-node" />
+          <text x="70" y="63" class="dragged-text" font-size="9">D</text>
+          <text x="130" y="55" font-size="10" fill="#6b7280">最近接を探し</text>
+          <text x="130" y="68" font-size="10" fill="#6b7280">
+            縦3分割で判定
+          </text>
+          <text
+            x="130"
+            y="110"
+            text-anchor="middle"
+            font-size="11"
+            fill="#dc2626"
+            font-weight="bold"
+          >
+            → 子Aのafter
+          </text>
+          <text
+            x="130"
+            y="125"
+            text-anchor="middle"
+            font-size="10"
+            fill="#6b7280"
+          >
+            or 子Bのbefore
+          </text>
+          <text
+            x="130"
+            y="140"
+            text-anchor="middle"
+            font-size="10"
+            fill="#6b7280"
+          >
+            （位置による）
+          </text>
+        </svg>
+      </div>
+      <div class="new">
+        <h4>新アルゴリズム</h4>
+        <svg viewBox="0 0 260 160" width="260" height="160">
+          <rect x="30" y="20" width="70" height="35" class="node-rect" />
+          <text x="65" y="38" class="node-text" font-size="11">子A</text>
+          <rect
+            x="30"
+            y="70"
+            width="70"
+            height="35"
+            class="node-rect"
+            stroke="#3b82f6"
+            stroke-width="2.5"
+          />
+          <text x="65" y="88" class="node-text" font-size="11">子B</text>
+          <rect x="40" y="50" width="60" height="25" class="dragged-node" />
+          <text x="70" y="63" class="dragged-text" font-size="9">D</text>
+          <text x="130" y="55" font-size="10" fill="#3b82f6">同列 → 子Bが</text>
+          <text x="130" y="68" font-size="10" fill="#3b82f6">ターゲット</text>
+          <text
+            x="130"
+            y="110"
+            text-anchor="middle"
+            font-size="11"
+            fill="#1d4ed8"
+            font-weight="bold"
+          >
+            → 子Bのbefore
+          </text>
+          <text
+            x="130"
+            y="125"
+            text-anchor="middle"
+            font-size="10"
+            fill="#6b7280"
+          >
+            Dの中心Yが
+          </text>
+          <text
+            x="130"
+            y="140"
+            text-anchor="middle"
+            font-size="10"
+            fill="#6b7280"
+          >
+            子Bの中心Yより上
+          </text>
+        </svg>
+      </div>
+    </div>
+
+    <h3>ケース3: 全ノードの左端にドロップ</h3>
+
+    <div class="comparison">
+      <div class="old">
+        <h4>現行アルゴリズム</h4>
+        <svg viewBox="0 0 260 130" width="260" height="130">
+          <rect x="10" y="40" width="60" height="40" class="dragged-node" />
+          <text x="40" y="60" class="dragged-text">D</text>
+          <rect x="160" y="20" width="60" height="40" class="node-rect" />
+          <text x="190" y="40" class="node-text">A</text>
+          <rect x="160" y="70" width="60" height="40" class="node-rect" />
+          <text x="190" y="90" class="node-text">B</text>
+          <text
+            x="130"
+            y="120"
+            text-anchor="middle"
+            font-size="11"
+            fill="#dc2626"
+            font-weight="bold"
+          >
+            → ルート化 (120px超)
+          </text>
+        </svg>
+      </div>
+      <div class="new">
+        <h4>新アルゴリズム</h4>
+        <svg viewBox="0 0 260 130" width="260" height="130">
+          <rect x="10" y="40" width="60" height="40" class="dragged-node" />
+          <text x="40" y="60" class="dragged-text">D</text>
+          <rect
+            x="160"
+            y="20"
+            width="60"
+            height="40"
+            class="node-rect"
+            stroke="#9ca3af"
+            stroke-dasharray="4 2"
+          />
+          <text x="190" y="40" class="node-text" fill="#9ca3af">A</text>
+          <rect
+            x="160"
+            y="70"
+            width="60"
+            height="40"
+            class="node-rect"
+            stroke="#9ca3af"
+            stroke-dasharray="4 2"
+          />
+          <text x="190" y="90" class="node-text" fill="#9ca3af">B</text>
+          <text
+            x="130"
+            y="120"
+            text-anchor="middle"
+            font-size="11"
+            fill="#dc2626"
+            font-weight="bold"
+          >
+            → ルート化 (左に候補なし)
+          </text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ================================================== -->
+    <h2>判定フローチャート（新アルゴリズム）</h2>
+    <!-- ================================================== -->
+
+    <div class="figure">
+      <svg viewBox="0 0 680 420" width="680" height="420">
+        <!-- Start -->
+        <rect
+          x="230"
+          y="10"
+          width="180"
+          height="36"
+          rx="18"
+          fill="#e0e7ff"
+          stroke="#6366f1"
+          stroke-width="1.5"
+        />
+        <text
+          x="320"
+          y="32"
+          text-anchor="middle"
+          font-size="12"
+          font-weight="bold"
+          fill="#4338ca"
+        >
+          ドラッグ終了
+        </text>
+        <line
+          x1="320"
+          y1="46"
+          x2="320"
+          y2="70"
+          stroke="#6b7280"
+          stroke-width="1.5"
+          marker-end="url(#arrowGray)"
+        />
+
+        <!-- 左側ノードあり？ -->
+        <polygon
+          points="320,70 440,105 320,140 200,105"
+          fill="#fef3c7"
+          stroke="#f59e0b"
+          stroke-width="1.5"
+        />
+        <text
+          x="320"
+          y="102"
+          text-anchor="middle"
+          font-size="11"
+          fill="#92400e"
+        >
+          左側ノード
+        </text>
+        <text
+          x="320"
+          y="115"
+          text-anchor="middle"
+          font-size="11"
+          fill="#92400e"
+        >
+          あり?
+        </text>
+
+        <!-- Yes → child -->
+        <line
+          x1="440"
+          y1="105"
+          x2="530"
+          y2="105"
+          stroke="#6b7280"
+          stroke-width="1.5"
+          marker-end="url(#arrowGray)"
+        />
+        <text x="480" y="98" font-size="10" fill="#6b7280">Yes</text>
+
+        <rect
+          x="530"
+          y="77"
+          width="140"
+          height="56"
+          rx="6"
+          fill="#f5f3ff"
+          stroke="#8b5cf6"
+          stroke-width="1.5"
+        />
+        <text x="600" y="97" text-anchor="middle" font-size="11" fill="#6d28d9">
+          |ΔY|最小を選択
+        </text>
+        <text
+          x="600"
+          y="112"
+          text-anchor="middle"
+          font-size="11"
+          fill="#6d28d9"
+        >
+          (同率ならX近い方)
+        </text>
+        <line
+          x1="600"
+          y1="133"
+          x2="600"
+          y2="155"
+          stroke="#6b7280"
+          stroke-width="1.5"
+          marker-end="url(#arrowGray)"
+        />
+
+        <rect
+          x="555"
+          y="155"
+          width="90"
+          height="32"
+          rx="6"
+          fill="#dcfce7"
+          stroke="#22c55e"
+          stroke-width="1.5"
+        />
+        <text
+          x="600"
+          y="175"
+          text-anchor="middle"
+          font-size="13"
+          fill="#166534"
+          font-weight="bold"
+        >
+          child
+        </text>
+
+        <!-- No ↓ -->
+        <line
+          x1="320"
+          y1="140"
+          x2="320"
+          y2="170"
+          stroke="#6b7280"
+          stroke-width="1.5"
+          marker-end="url(#arrowGray)"
+        />
+        <text x="330" y="158" font-size="10" fill="#6b7280">No</text>
+
+        <!-- 同列ノードあり？ -->
+        <polygon
+          points="320,170 440,205 320,240 200,205"
+          fill="#fef3c7"
+          stroke="#f59e0b"
+          stroke-width="1.5"
+        />
+        <text
+          x="320"
+          y="202"
+          text-anchor="middle"
+          font-size="11"
+          fill="#92400e"
+        >
+          同列ノード
+        </text>
+        <text
+          x="320"
+          y="215"
+          text-anchor="middle"
+          font-size="11"
+          fill="#92400e"
+        >
+          あり?
+        </text>
+
+        <!-- No → ルート化 -->
+        <line
+          x1="200"
+          y1="205"
+          x2="100"
+          y2="205"
+          stroke="#6b7280"
+          stroke-width="1.5"
+          marker-end="url(#arrowGray)"
+        />
+        <text x="150" y="198" font-size="10" fill="#6b7280">No</text>
+        <rect
+          x="10"
+          y="189"
+          width="90"
+          height="32"
+          rx="6"
+          fill="#fef2f2"
+          stroke="#ef4444"
+          stroke-width="1.5"
+        />
+        <text x="55" y="209" text-anchor="middle" font-size="12" fill="#dc2626">
+          ルート化
+        </text>
+
+        <!-- Yes ↓ -->
+        <line
+          x1="320"
+          y1="240"
+          x2="320"
+          y2="270"
+          stroke="#6b7280"
+          stroke-width="1.5"
+          marker-end="url(#arrowGray)"
+        />
+        <text x="330" y="258" font-size="10" fill="#6b7280">Yes</text>
+
+        <!-- |ΔY|最小 -->
+        <rect
+          x="220"
+          y="270"
+          width="200"
+          height="36"
+          rx="6"
+          fill="#f5f3ff"
+          stroke="#8b5cf6"
+          stroke-width="1.5"
+        />
+        <text
+          x="320"
+          y="292"
+          text-anchor="middle"
+          font-size="12"
+          fill="#6d28d9"
+        >
+          |ΔY|最小のノードを選択
+        </text>
+        <line
+          x1="320"
+          y1="306"
+          x2="320"
+          y2="336"
+          stroke="#6b7280"
+          stroke-width="1.5"
+          marker-end="url(#arrowGray)"
+        />
+
+        <!-- 上下判定 -->
+        <rect
+          x="220"
+          y="336"
+          width="200"
+          height="36"
+          rx="6"
+          fill="#f3e8ff"
+          stroke="#a855f7"
+          stroke-width="1.5"
+        />
+        <text
+          x="320"
+          y="358"
+          text-anchor="middle"
+          font-size="12"
+          fill="#7e22ce"
+        >
+          中心Yで上下判定
+        </text>
+
+        <!-- 2分岐 -->
+        <line
+          x1="270"
+          y1="372"
+          x2="180"
+          y2="398"
+          stroke="#6b7280"
+          stroke-width="1.5"
+          marker-end="url(#arrowGray)"
+        />
+        <line
+          x1="370"
+          y1="372"
+          x2="460"
+          y2="398"
+          stroke="#6b7280"
+          stroke-width="1.5"
+          marker-end="url(#arrowGray)"
+        />
+
+        <text x="170" y="393" font-size="9" fill="#6b7280">上</text>
+        <text x="440" y="393" font-size="9" fill="#6b7280">下</text>
+
+        <rect
+          x="125"
+          y="398"
+          width="100"
+          height="28"
+          rx="6"
+          fill="#dbeafe"
+          stroke="#3b82f6"
+          stroke-width="1.5"
+        />
+        <text
+          x="175"
+          y="416"
+          text-anchor="middle"
+          font-size="12"
+          fill="#1d4ed8"
+        >
+          before
+        </text>
+
+        <rect
+          x="415"
+          y="398"
+          width="100"
+          height="28"
+          rx="6"
+          fill="#fef3c7"
+          stroke="#f59e0b"
+          stroke-width="1.5"
+        />
+        <text
+          x="465"
+          y="416"
+          text-anchor="middle"
+          font-size="12"
+          fill="#92400e"
+        >
+          after
+        </text>
+      </svg>
+    </div>
+
+    <!-- ================================================== -->
+    <h2>変更箇所のまとめ</h2>
+    <!-- ================================================== -->
+
+    <table>
+      <tr>
+        <th></th>
+        <th>現行</th>
+        <th>新案</th>
+      </tr>
+      <tr>
+        <td><strong>ターゲット選択</strong></td>
+        <td>全候補からユークリッド距離最小</td>
+        <td>
+          左側候補 → |ΔY|最小（同率ならX近い方）<br />同列候補 →
+          |ΔY|最小（フォールバック）
+        </td>
+      </tr>
+      <tr>
+        <td><strong>ルート化条件</strong></td>
+        <td>距離 ≥ 120px</td>
+        <td>左側にも同列にも候補がない</td>
+      </tr>
+      <tr>
+        <td><strong>挿入モード</strong></td>
+        <td>縦3分割 (before/child/after)<br />+ 子なし横検出</td>
+        <td>
+          左側ターゲット → 常にchild<br />同列ターゲット → 上下2分割
+          (before/after)
+        </td>
+      </tr>
+      <tr>
+        <td><strong>閾値パラメータ</strong></td>
+        <td>120px（ハードコード）</td>
+        <td>不要</td>
+      </tr>
+      <tr>
+        <td><strong>子なし横検出</strong></td>
+        <td>右2/3で child 優先</td>
+        <td>廃止（左側吸着で自然にカバー）</td>
+      </tr>
+      <tr>
+        <td><strong>操作の意図</strong></td>
+        <td>距離と縦位置で複合判定</td>
+        <td>右にドラッグ = 子にしたい<br />同じ列にドラッグ = 並び替えたい</td>
+      </tr>
+    </table>
+
+    <div class="note">
+      <strong>「左側」の定義:</strong>
+      ノードの右端 (x + width) &lt; ドラッグノードの左端 (x)。
+      部分的に重なるケースは「同列」扱いとします。
+    </div>
+  </body>
+</html>
