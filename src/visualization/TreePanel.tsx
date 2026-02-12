@@ -18,7 +18,6 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useTreeStore } from '../store/treeStore';
-import { ROOT_NODE_ID } from '../store/types';
 import { useTreeLayout } from './useTreeLayout';
 import CustomNode from './CustomNode';
 import { determineDropTargetV2, type NodeRect, type DropTarget, type InsertMode } from './dragCalculator';
@@ -196,7 +195,7 @@ const TreePanel = () => {
       // React FlowのNodeをNodeRectに変換
       const dragged = nodeToRect(draggedNode);
       const candidates = layoutNodes
-        .filter((n) => n.id !== draggedNode.id && n.id !== ROOT_NODE_ID)
+        .filter((n) => n.id !== draggedNode.id)
         .map(nodeToRect);
 
       // determineDropTargetV2を使ってドロップ先を判定（左側ノード吸着方式）
@@ -226,7 +225,7 @@ const TreePanel = () => {
       // React FlowのNodeをNodeRectに変換
       const dragged = nodeToRect(draggedNode);
       const candidates = layoutNodes
-        .filter((n) => n.id !== draggedNode.id && n.id !== ROOT_NODE_ID)
+        .filter((n) => n.id !== draggedNode.id)
         .map(nodeToRect);
 
       // determineDropTargetV2を使ってドロップ先を判定（左側ノード吸着方式）
