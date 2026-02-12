@@ -1,0 +1,6 @@
+# IMPROVEMENT_PROMPT.mdの変更はオーナーのレビューを必須にする
+# （改ざんによるClaude Codeへの悪意ある指示を防止）
+.github/IMPROVEMENT_PROMPT.md @taktamur
+
+# ワークフローファイルの変更もオーナーのレビューを必須にする
+.github/workflows/ @taktamur
