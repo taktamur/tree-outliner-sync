@@ -5,6 +5,7 @@
  * 1階層につき1文字のインデント（スペースまたはタブ）を使用する。
  */
 import type { TreeNode } from '../store/types';
+import { ROOT_NODE_ID } from '../store/types';
 import { generateId } from '../shared/idGenerator';
 import { getFlattenedOrder, getDepth } from '../store/operations';
 
@@ -27,13 +28,19 @@ const detectIndentUnit = (lines: string[]): string => {
 /**
  * Scrapbox形式のテキストをTreeNode配列に変換
  * @param text - Scrapbox形式のテキスト（改行区切り）
- * @returns TreeNode配列
+ * @returns TreeNode配列（隠しルートノードを含む）
  */
 export const parseScrapboxToTree = (text: string): TreeNode[] => {
   const lines = text.split('\n').filter((line) => line.trim());
-  if (lines.length === 0) return [];
+  if (lines.length === 0) {
+    // 空の場合は隠しルートのみを返す
+    return [{ id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 }];
+  }
 
-  const nodes: TreeNode[] = [];
+  // 隠しルートノードを追加
+  const nodes: TreeNode[] = [
+    { id: ROOT_NODE_ID, text: '__root__', parentId: null, order: 0 }
+  ];
   const stack: { depth: number; id: string }[] = [];
   const indentUnit = detectIndentUnit(lines);
 
@@ -56,7 +63,8 @@ export const parseScrapboxToTree = (text: string): TreeNode[] => {
       stack.pop();
     }
 
-    const parentId = stack.length > 0 ? stack[stack.length - 1].id : null;
+    // インデントなし（depth=0）の場合は隠しルートの子にする
+    const parentId = stack.length > 0 ? stack[stack.length - 1].id : ROOT_NODE_ID;
 
     // 同じ親の子ノード数を数えてorder決定
     const siblings = nodes.filter((n) => n.parentId === parentId);

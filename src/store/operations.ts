@@ -1,4 +1,5 @@
 import type { TreeNode } from './types';
+import { ROOT_NODE_ID } from './types';
 
 /** 指定parentIdの子ノードをorder順で取得 */
 export const getChildren = (nodes: TreeNode[], parentId: string | null): TreeNode[] =>
@@ -16,18 +17,21 @@ export const getFlattenedOrder = (nodes: TreeNode[]): TreeNode[] => {
   const visit = (parentId: string | null) => {
     const children = getChildren(nodes, parentId);
     for (const child of children) {
-      result.push(child);
+      // 隠しルートノード自体は結果に含めない
+      if (child.id !== ROOT_NODE_ID) {
+        result.push(child);
+      }
       visit(child.id);
     }
   };
-  visit(null);
+  visit(ROOT_NODE_ID);
   return result;
 };
 
 /** ノードの深さを取得 */
 export const getDepth = (nodes: TreeNode[], nodeId: string): number => {
   const node = nodes.find((n) => n.id === nodeId);
-  if (!node || !node.parentId) return 0;
+  if (!node || !node.parentId || node.parentId === ROOT_NODE_ID) return 0;
   return 1 + getDepth(nodes, node.parentId);
 };
 
@@ -58,7 +62,8 @@ export const indentNode = (nodes: TreeNode[], nodeId: string): TreeNode[] | null
  */
 export const outdentNode = (nodes: TreeNode[], nodeId: string): TreeNode[] | null => {
   const node = nodes.find((n) => n.id === nodeId);
-  if (!node || !node.parentId) return null; // ルートはアウトデント不可
+  // 隠しルートの子（トップレベル）もアウトデント不可
+  if (!node || !node.parentId || node.parentId === ROOT_NODE_ID) return null;
 
   const parent = nodes.find((n) => n.id === node.parentId);
   if (!parent) return null;
@@ -110,7 +115,8 @@ export const addNodeAfter = (
  */
 export const deleteNode = (nodes: TreeNode[], nodeId: string): TreeNode[] => {
   const node = nodes.find((n) => n.id === nodeId);
-  if (!node) return nodes;
+  // 隠しルートノードの削除を防止
+  if (!node || nodeId === ROOT_NODE_ID) return nodes;
 
   const children = nodes.filter((n) => n.parentId === nodeId);
   const promoted = children.map((c) => ({

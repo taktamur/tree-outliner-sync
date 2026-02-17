@@ -182,25 +182,20 @@ export const determineDropTarget = (
  *
  * 1. 候補を左側ノードと同列ノードに分類
  * 2. 同列ノード優先で|ΔY|最小を選択（同率なら|ΔX|最小）
- * 3. 距離閾値チェック: 最近接ノードが150px以上離れていればルート化
- * 4. 左側ターゲット→child、同列ターゲット→before/after
+ * 3. 左側ターゲット→child、同列ターゲット→before/after
  *
  * @param dragged ドラッグされたノード
  * @param candidates 候補ノード（自分自身は含めない前提）
- * @param threshold 距離閾値（px）デフォルト150px
  * @returns ドロップ先の情報
  */
 export const determineDropTargetV2 = (
   dragged: NodeRect,
   candidates: NodeRect[],
-  threshold = 150,
 ): DropTarget => {
   if (candidates.length === 0) {
     return { parentId: null };
   }
 
-  const draggedWidth = calculateNodeWidth(dragged.label);
-  const draggedCenterX = dragged.x + draggedWidth / 2;
   const draggedCenterY = dragged.y + NODE_HEIGHT / 2;
   const draggedLeft = dragged.x;
 
@@ -254,20 +249,6 @@ export const determineDropTargetV2 = (
 
   // ターゲットが見つからない場合はルート化
   if (targetNode === null) {
-    return { parentId: null };
-  }
-
-  // 距離閾値チェック: 最近接ノードまでの距離を計算
-  const targetWidth = calculateNodeWidth(targetNode.label);
-  const targetCenterX = targetNode.x + targetWidth / 2;
-  const targetCenterY = targetNode.y + NODE_HEIGHT / 2;
-  const distance = Math.sqrt(
-    (draggedCenterX - targetCenterX) ** 2 +
-    (draggedCenterY - targetCenterY) ** 2,
-  );
-
-  // 距離が閾値以上ならルート化
-  if (distance >= threshold) {
     return { parentId: null };
   }
 

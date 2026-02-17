@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useTreeStore } from '../store/treeStore';
+import { ROOT_NODE_ID } from '../store/types';
 import { getChildren } from '../store/operations';
 import OutlinerItem from './OutlinerItem';
 import ConfirmDialog from '../shared/components/ConfirmDialog/ConfirmDialog';
@@ -21,7 +22,7 @@ const OutlinerPanel = () => {
   const nodes = useTreeStore((s) => s.nodes);
   const importFromScrapbox = useTreeStore((s) => s.importFromScrapbox);
   const exportToScrapbox = useTreeStore((s) => s.exportToScrapbox);
-  const rootNodes = getChildren(nodes, null); // parentId === null のノードを取得
+  const rootNodes = getChildren(nodes, ROOT_NODE_ID); // 隠しルートノードの子を取得
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);

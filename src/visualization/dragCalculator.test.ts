@@ -491,104 +491,15 @@ describe('dragCalculator', () => {
       };
 
       // 候補: 右端20 < 100 なので左側ノード
-      // 中心(-20, 120)、距離: 160px (> 150px) → デフォルト閾値でルート化される
-      // 閾値を200pxに設定して接続させる
+      // 中心(-20, 120)、距離: 160px
       const candidates: NodeRect[] = [
         { id: 'far-left', x: -60, y: 100, label: 'F' }, // 左端-60、幅80、右端20
       ];
 
-      const result = determineDropTargetV2(dragged, candidates, 200);
+      const result = determineDropTargetV2(dragged, candidates);
 
       expect(result.targetNodeId).toBe('far-left');
       expect(result.insertMode).toBe('child'); // 左側ノードは常にchild
-    });
-
-    it('should return null when distance exceeds threshold (default 150px)', () => {
-      // ドラッグ: 幅80px、中心(140, 120)
-      const dragged: NodeRect = {
-        id: 'dragged',
-        x: 100,
-        y: 100,
-        label: 'D',
-      };
-
-      // 候補: 中心(340, 120)、距離: 200px (> 150px)
-      const candidates: NodeRect[] = [
-        { id: 'far', x: 300, y: 100, label: 'F' },
-      ];
-
-      const result = determineDropTargetV2(dragged, candidates);
-
-      expect(result).toEqual({ parentId: null });
-    });
-
-    it('should return target when distance is within threshold', () => {
-      // ドラッグ: 幅80px、中心(140, 120)
-      const dragged: NodeRect = {
-        id: 'dragged',
-        x: 100,
-        y: 100,
-        label: 'D',
-      };
-
-      // 候補: 中心(240, 120)、距離: 100px (< 150px)
-      const candidates: NodeRect[] = [
-        { id: 'near', x: 200, y: 100, label: 'N' },
-      ];
-
-      const result = determineDropTargetV2(dragged, candidates);
-
-      expect(result.targetNodeId).toBe('near');
-      expect(result.insertMode).toBe('after'); // 同列ノード、中心Y同じなので after
-    });
-
-    it('should use custom threshold when provided', () => {
-      // ドラッグ: 幅80px、中心(140, 120)
-      const dragged: NodeRect = {
-        id: 'dragged',
-        x: 100,
-        y: 100,
-        label: 'D',
-      };
-
-      // 候補: 中心(240, 120)、距離: 100px
-      const candidates: NodeRect[] = [
-        { id: 'target', x: 200, y: 100, label: 'T' },
-      ];
-
-      // 閾値80px → 距離100px > 80px → ルート化
-      const result1 = determineDropTargetV2(dragged, candidates, 80);
-      expect(result1).toEqual({ parentId: null });
-
-      // 閾値120px → 距離100px < 120px → 接続
-      const result2 = determineDropTargetV2(dragged, candidates, 120);
-      expect(result2.targetNodeId).toBe('target');
-      expect(result2.insertMode).toBe('after');
-    });
-
-    it('should handle boundary case (exactly at threshold)', () => {
-      // 1文字ラベルは幅80px、中心は x+40, y+20
-      const dragged: NodeRect = {
-        id: 'dragged',
-        x: 0,
-        y: 0,
-        label: 'D', // 中心(40, 20)
-      };
-
-      // 150px離れた位置に配置（中心間距離が150pxになるように）
-      // 中心X座標: 40 + 150 = 190 → 左上X座標: 190 - 40 = 150
-      const candidates: NodeRect[] = [
-        { id: 'node1', x: 150, y: 0, label: 'N' }, // 中心(190, 20) → 距離: 150px
-      ];
-
-      // 距離150px、閾値150pxの場合 → 範囲外（distance >= threshold なので）
-      const result1 = determineDropTargetV2(dragged, candidates, 150);
-      expect(result1).toEqual({ parentId: null });
-
-      // 距離150px、閾値151pxの場合 → 範囲内
-      const result2 = determineDropTargetV2(dragged, candidates, 151);
-      expect(result2.targetNodeId).toBe('node1');
-      expect(result2.insertMode).toBe('after'); // 同列ノード、中心Y同じなので after
     });
   });
 });
