@@ -304,3 +304,150 @@ export const determineInsertModeV2 = (
   const targetCenterY = targetNode.y + NODE_HEIGHT / 2;
   return draggedCenterY < targetCenterY ? 'before' : 'after';
 };
+
+// =============================================================================
+// V3アルゴリズム: Prolog風宣言的スタイル
+// =============================================================================
+
+/** ノードの中心座標 */
+interface NodeCenter {
+  x: number;
+  y: number;
+}
+
+/** 分類されたノード候補 */
+interface CategorizedCandidate {
+  node: NodeRect;
+  category: 'left' | 'sameColumn';
+}
+
+// --- 空間述語 (Spatial Predicates) ---
+
+/** candidateはdraggedの左側にある（候補の右端 < ドラッグの左端） */
+const isLeftOf = (candidate: NodeRect, dragged: NodeRect): boolean => {
+  const candidateRight = candidate.x + calculateNodeWidth(candidate.label);
+  return candidateRight < dragged.x;
+};
+
+/** 2ノードが閾値内の距離にある */
+const isWithinThreshold = (a: NodeCenter, b: NodeCenter, threshold: number): boolean =>
+  Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2) < threshold;
+
+/** ノードの中心座標を計算 */
+const centerOf = (node: NodeRect): NodeCenter => ({
+  x: node.x + calculateNodeWidth(node.label) / 2,
+  y: node.y + NODE_HEIGHT / 2,
+});
+
+// --- 選択ルール (Selection Rules) ---
+
+/** 候補ノードを左側/同列に分類 */
+const categorize = (candidates: NodeRect[], dragged: NodeRect): CategorizedCandidate[] =>
+  candidates.map((node) => ({
+    node,
+    category: isLeftOf(node, dragged) ? 'left' : 'sameColumn',
+  }));
+
+/** |ΔY|最小（同率なら|ΔX|最小）の候補を選択 */
+const selectByMinDeltaY = (
+  categorized: CategorizedCandidate[],
+  draggedCenter: NodeCenter,
+): CategorizedCandidate | null =>
+  categorized.reduce<CategorizedCandidate | null>((best, current) => {
+    if (best === null) return current;
+    const currentCenter = centerOf(current.node);
+    const bestCenter = centerOf(best.node);
+    const currentDeltaY = Math.abs(draggedCenter.y - currentCenter.y);
+    const bestDeltaY = Math.abs(draggedCenter.y - bestCenter.y);
+    if (currentDeltaY < bestDeltaY) return current;
+    if (currentDeltaY === bestDeltaY) {
+      const currentDeltaX = Math.abs(draggedCenter.x - currentCenter.x);
+      const bestDeltaX = Math.abs(draggedCenter.x - bestCenter.x);
+      return currentDeltaX < bestDeltaX ? current : best;
+    }
+    return best;
+  }, null);
+
+/** 同列ノード優先でベスト候補を選択 */
+const selectBestCandidate = (
+  categorized: CategorizedCandidate[],
+  draggedCenter: NodeCenter,
+): CategorizedCandidate | null => {
+  const sameColumn = categorized.filter((c) => c.category === 'sameColumn');
+  const prioritized = sameColumn.length > 0 ? sameColumn : categorized.filter((c) => c.category === 'left');
+  return selectByMinDeltaY(prioritized, draggedCenter);
+};
+
+// --- 挿入ルール (Insertion Rules) ---
+
+/** 挿入ルールの型 */
+interface InsertionRule {
+  when: (candidate: CategorizedCandidate, draggedCenter: NodeCenter) => boolean;
+  then: InsertMode;
+}
+
+/** ルール配列（優先順位順に評価される） */
+const insertionRules: readonly InsertionRule[] = [
+  {
+    when: (c) => c.category === 'left',
+    then: 'child',
+  },
+  {
+    when: (c, d) => d.y < centerOf(c.node).y,
+    then: 'before',
+  },
+  {
+    when: () => true,
+    then: 'after',
+  },
+];
+
+/** ルールを順番に評価して最初にマッチした挿入モードを返す */
+const applyInsertionRules = (candidate: CategorizedCandidate, draggedCenter: NodeCenter): InsertMode =>
+  insertionRules.find((rule) => rule.when(candidate, draggedCenter))!.then;
+
+// --- メイン関数 ---
+
+/**
+ * Prolog風宣言的スタイルでドロップ先を判定（V3アルゴリズム）
+ *
+ * V2と同等のロジックを、述語・ルール配列・reduce による宣言的スタイルで表現。
+ * - 空間述語: isLeftOf, isWithinThreshold, centerOf
+ * - 選択ルール: categorize → selectBestCandidate
+ * - 挿入ルール: insertionRules 配列を find で評価
+ *
+ * @param dragged ドラッグされたノード
+ * @param candidates 候補ノード（自分自身は含めない前提）
+ * @param threshold 距離閾値（px）デフォルト150px
+ * @returns ドロップ先の情報
+ */
+export const determineDropTargetV3 = (
+  dragged: NodeRect,
+  candidates: NodeRect[],
+  threshold = 150,
+): DropTarget => {
+  if (candidates.length === 0) {
+    return { parentId: null };
+  }
+
+  const draggedCenter = centerOf(dragged);
+  const categorized = categorize(candidates, dragged);
+  const best = selectBestCandidate(categorized, draggedCenter);
+
+  if (best === null) {
+    return { parentId: null };
+  }
+
+  const targetCenter = centerOf(best.node);
+  if (!isWithinThreshold(draggedCenter, targetCenter, threshold)) {
+    return { parentId: null };
+  }
+
+  const insertMode = applyInsertionRules(best, draggedCenter);
+
+  return {
+    parentId: best.node.id,
+    insertMode,
+    targetNodeId: best.node.id,
+  };
+};

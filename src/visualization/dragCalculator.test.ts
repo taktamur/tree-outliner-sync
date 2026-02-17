@@ -5,6 +5,7 @@ import {
   determineInsertMode,
   determineDropTargetV2,
   determineInsertModeV2,
+  determineDropTargetV3,
   type NodeRect
 } from './dragCalculator';
 
@@ -589,6 +590,98 @@ describe('dragCalculator', () => {
       const result2 = determineDropTargetV2(dragged, candidates, 151);
       expect(result2.targetNodeId).toBe('node1');
       expect(result2.insertMode).toBe('after'); // 同列ノード、中心Y同じなので after
+    });
+  });
+
+  describe('determineDropTargetV3 (Prolog風宣言的スタイル)', () => {
+    it('should return null when candidates are empty', () => {
+      const dragged: NodeRect = { id: 'dragged', x: 100, y: 100, label: 'Dragged' };
+      expect(determineDropTargetV3(dragged, [])).toEqual({ parentId: null });
+    });
+
+    it('should return null when distance exceeds threshold', () => {
+      const dragged: NodeRect = { id: 'dragged', x: 100, y: 100, label: 'D' };
+      const candidates: NodeRect[] = [{ id: 'far', x: 300, y: 100, label: 'F' }];
+      expect(determineDropTargetV3(dragged, candidates)).toEqual({ parentId: null });
+    });
+
+    it('should assign child mode for left-side target', () => {
+      const dragged: NodeRect = { id: 'dragged', x: 100, y: 100, label: 'Dragged' };
+      const candidates: NodeRect[] = [
+        { id: 'left', x: 0, y: 100, label: 'L' }, // 右端80 < 100
+      ];
+      const result = determineDropTargetV3(dragged, candidates, 200);
+      expect(result.targetNodeId).toBe('left');
+      expect(result.insertMode).toBe('child');
+    });
+
+    it('should assign before mode when dragged above same-column target', () => {
+      const dragged: NodeRect = { id: 'dragged', x: 100, y: 50, label: 'Dragged' };
+      const candidates: NodeRect[] = [
+        { id: 'below', x: 100, y: 150, label: 'Below' }, // 中心Y: 170、ドラッグ中心Y(70) < 170 → before
+      ];
+      const result = determineDropTargetV3(dragged, candidates);
+      expect(result.targetNodeId).toBe('below');
+      expect(result.insertMode).toBe('before');
+    });
+
+    it('should assign after mode when dragged below same-column target', () => {
+      const dragged: NodeRect = { id: 'dragged', x: 100, y: 150, label: 'Dragged' };
+      const candidates: NodeRect[] = [
+        { id: 'above', x: 100, y: 50, label: 'Above' }, // 中心Y: 70、ドラッグ中心Y(170) >= 70 → after
+      ];
+      const result = determineDropTargetV3(dragged, candidates);
+      expect(result.targetNodeId).toBe('above');
+      expect(result.insertMode).toBe('after');
+    });
+
+    it('should prefer same-column node over left node', () => {
+      const dragged: NodeRect = { id: 'dragged', x: 100, y: 100, label: 'Dragged' };
+      const candidates: NodeRect[] = [
+        { id: 'left', x: 0, y: 150, label: 'Left' },
+        { id: 'same', x: 100, y: 100, label: 'Same' },
+      ];
+      const result = determineDropTargetV3(dragged, candidates);
+      expect(result.targetNodeId).toBe('same');
+    });
+
+    it('should produce same result as V2 (cross-test: left node)', () => {
+      const dragged: NodeRect = { id: 'dragged', x: 100, y: 100, label: 'Dragged' };
+      const candidates: NodeRect[] = [
+        { id: 'left1', x: 0, y: 100, label: 'L1' },
+        { id: 'left2', x: 0, y: 150, label: 'L2' },
+      ];
+      const v2 = determineDropTargetV2(dragged, candidates);
+      const v3 = determineDropTargetV3(dragged, candidates);
+      expect(v3.targetNodeId).toBe(v2.targetNodeId);
+      expect(v3.insertMode).toBe(v2.insertMode);
+      expect(v3.parentId).toBe(v2.parentId);
+    });
+
+    it('should produce same result as V2 (cross-test: same-column nodes)', () => {
+      const dragged: NodeRect = { id: 'dragged', x: 100, y: 100, label: 'Dragged' };
+      const candidates: NodeRect[] = [
+        { id: 'above', x: 100, y: 50, label: 'Above' },
+        { id: 'below', x: 100, y: 150, label: 'Below' },
+      ];
+      const v2 = determineDropTargetV2(dragged, candidates);
+      const v3 = determineDropTargetV3(dragged, candidates);
+      expect(v3.targetNodeId).toBe(v2.targetNodeId);
+      expect(v3.insertMode).toBe(v2.insertMode);
+      expect(v3.parentId).toBe(v2.parentId);
+    });
+
+    it('should produce same result as V2 (cross-test: threshold boundary)', () => {
+      const dragged: NodeRect = { id: 'dragged', x: 0, y: 0, label: 'D' };
+      const candidates: NodeRect[] = [{ id: 'node1', x: 150, y: 0, label: 'N' }];
+      const v2_out = determineDropTargetV2(dragged, candidates, 150);
+      const v3_out = determineDropTargetV3(dragged, candidates, 150);
+      expect(v3_out).toEqual(v2_out);
+
+      const v2_in = determineDropTargetV2(dragged, candidates, 151);
+      const v3_in = determineDropTargetV3(dragged, candidates, 151);
+      expect(v3_in.targetNodeId).toBe(v2_in.targetNodeId);
+      expect(v3_in.insertMode).toBe(v2_in.insertMode);
     });
   });
 });
